@@ -46,6 +46,9 @@ export const useExercises = (from: string, to: string) =>
 export const useExercise = (id: string | null) =>
   useQuery({ queryKey: ["exercise", id], queryFn: () => api.exercise(id ?? ""), enabled: Boolean(id) });
 
+export const useSummary = (date: string, enabled = true) =>
+  useQuery({ queryKey: ["summary", date], queryFn: () => api.summary(date), enabled });
+
 export const useRecords = () => useQuery({ queryKey: ["records"], queryFn: api.records });
 
 export const useSettings = () => useQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 5 * 60_000 });

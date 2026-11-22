@@ -4,7 +4,7 @@ Pulse is a self-hosted, single-user dashboard for your Fitbit data, read from th
 **Google Health API v4**. It runs on your own server at no cost. It uses no cloud hosting and
 no AI calls, and your health data stays on the server.
 
-> **Status: Phase 2 — full dashboard.**
+> **Status: Phase 3 — daily summary and automatic backups, on top of the full dashboard.**
 > Pages: Today, Sleep, Heart & recovery, Activity (with workout detail), Trends & explore, Records & streaks and Settings. It is an installable PWA, and readiness is a personal heuristic.
 
 ## Quick start
@@ -37,6 +37,8 @@ is enabled (`systemctl enable docker`).
 | `pulse backfill [--since YYYY-MM-DD] [--restart]` | Fetches history newest-first in 90-day chunks. It finds the earliest data itself, shows progress, and resumes where it stopped if interrupted. |
 | `pulse sync [-s STREAM]` | Runs one incremental sync now. Each run re-fetches the last 3 days, because the device revises recent data. |
 | `pulse passcode set` / `clear` | Sets or removes the optional 4–6 digit passcode for the web UI. Setting it logs out every device. |
+| `pulse backup [--list]` | Backs up the database now. Uses SQLite's online backup, so it's safe while the server runs. Checks integrity, gzips the copy, then rotates old backups. `--list` shows existing backups. |
+| `pulse restore FILE [--yes]` | Replaces the database with a backup, keeping the current one as `pulse.db.pre-restore-<time>`. It refuses while the server or a sync is running. |
 | `pulse openapi [--out FILE]` | Writes the OpenAPI spec. The frontend types are generated from it, and so will the future Android client be. |
 | `pulse serve` | Starts the API, the PWA and the 15-minute scheduler. OpenAPI is at `/api/v1/openapi.json`, docs at `/api/v1/docs`. |
 
@@ -87,6 +89,21 @@ Google Health API v4 ──(httpx, throttled, backoff)──► sync streams ─
 
 **Streaks** count steps and sleep per day, and AZM per week. Today and the current week are in progress: they extend a streak but never break it. A day with no data breaks a streak.
 
+### Daily summary (Phase 3)
+`src/pulse/summary.py` writes a short note for any day. It uses fixed template rules and **no AI**, so the same data always gives the same text. `queries.day_facts` gathers the facts: readiness and what drove it, sleep against your goal and your sleep debt, a shifted bedtime, unusual vitals, weekly AZM progress, steps so far against your usual pace, streaks at stake, new personal bests, and training load.
+
+Each rule returns a sentence or nothing. Sentences are ranked by priority, and at most 4 are shown under a one-line headline. Today's summary uses "so far" wording; earlier days use the past tense (`GET /api/v1/summary?date=`).
+
+The wording compares you with your own baselines and never diagnoses. A vital is only mentioned when the difference is real: it must be well outside your usual range, or a bit outside it two days running, and above a minimum size (for example 2 bpm for resting HR). The summary is computed on request in about 5 ms, so it always matches re-synced data and changed goals.
+
+### Backups
+- **Nightly backup.** Runs at `PULSE_BACKUP_TIME` (03:30 local by default) and writes `data/backups/pulse-YYYY-MM-DD-HHMM.db.gz`. Files are mode 0600 in a 0700 directory and are never served over HTTP. Your current database (about 110 MB) compresses to about 14 MB.
+- **Rotation.** Keeps the newest backup of each of the last **7 days, 4 weeks and 6 months**, and never deletes the newest backup.
+- **Status.** Settings → Backups shows the last run and has a **Back up now** button (`POST /api/v1/backup`).
+- **Another disk.** Set `PULSE_BACKUP_DIR` and mount that disk; see the commented lines in `docker-compose.yml`.
+- **Restore.** Run `docker compose stop`, then `docker compose run --rm pulse restore /data/backups/<file>`, then `docker compose up -d`. The server holds a lock, so a restore refuses to run while the server is up.
+- Backups contain all your health data. Copy them somewhere private, such as a second disk or an encrypted drive. They are useless without that care.
+
 ### API (`/api/v1`, OpenAPI at `/api/v1/openapi.json`)
 | Endpoint | Purpose |
 |---|---|
@@ -98,8 +115,9 @@ Google Health API v4 ──(httpx, throttled, backoff)──► sync streams ─
 | `GET /activity/heatmap` | Average steps by hour of day × weekday (DST-aware) |
 | `GET /exercises`, `/exercises/{id}` | Workouts. Detail includes the HR curve and time in each zone. |
 | `GET /records` | Personal bests and streaks |
+| `GET /summary?date=` | Rule-based daily summary. It's also included in `/today`. |
 | `GET/PUT /settings`, `PUT /settings/passcode` | Goals, units, readiness weights and passcode |
-| `POST /sync`, `/backfill`, `/resync` | Start background jobs. Returns 409 while another job runs. |
+| `POST /sync`, `/backfill`, `/resync`, `/backup` | Start background jobs. Returns 409 while another job runs. |
 
 Pages hide any metric your device has never reported, using `/status.metrics`. On a Fitbit Air that means floors, VO2 max and weight.
 
@@ -110,6 +128,8 @@ src/pulse/
   models.py, db.py, migrations/                     schema (SQLAlchemy 2 + Alembic, auto-migrates at start)
   queries.py, metrics.py                            read side (SQL aggregation), metric catalog
   derived.py, derive.py                             derived metrics: pure maths + recompute job
+  summary.py                                        rule-based daily summary (pure, templates)
+  backup.py                                         online backup, rotation, restore, runner
   api/{app,routes,schemas}.py                       FastAPI, passcode gate, SPA serving, OpenAPI
   scheduler.py, security.py, prefs.py, cli.py
 frontend/                                           Vite + React + TS, TanStack Query, Tailwind, ECharts, PWA
@@ -144,17 +164,11 @@ These tables are enough to build a future template-based daily summary without s
 | `tests/fixtures/` | small synthetic responses in the documented shapes | — | Yes |
 | `data/pulse.db` (+ `-wal`, `-shm`) | all synced health data | — | **No** |
 | `data/secret_key` | HMAC key for passcode session cookies | 0600 | **No** |
+| `data/backups/` | nightly gzipped database backups (all health data) | dir 0700, files 0600 | **No** |
 
 ## Backups
 
-All state is in `data/`. Back up with SQLite's online backup, which is safe while the server runs:
-
-```bash
-sqlite3 data/pulse.db ".backup 'backups/pulse-$(date +%F).db'"
-```
-
-Copy `backups/` and `.env` somewhere private. The token can always be re-issued with
-`pulse auth`.
+Backups are automatic: see *Backups* under Architecture. For an ad-hoc copy, `docker compose exec pulse pulse backup` writes one immediately. Also keep `.env` somewhere private. The token can always be re-issued with `pulse auth`.
 
 ## Running without Docker (systemd)
 

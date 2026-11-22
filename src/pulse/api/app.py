@@ -16,6 +16,7 @@ from sqlalchemy import Engine
 
 from pulse import __version__, prefs, security
 from pulse.api.routes import router, session_valid
+from pulse.backup import BackupRunner, server_presence
 from pulse.client import HealthClient
 from pulse.config import Settings, get_settings
 from pulse.db import make_engine, make_session_factory, migrate
@@ -52,9 +53,13 @@ def create_app(
     sessions = make_session_factory(engine)
     run_scheduler = settings.scheduler_enabled if start_scheduler is None else start_scheduler
 
+    backup_runner = BackupRunner(sessions, settings.db_path, settings.backups_path, settings.zone)
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         migrate(engine)
+        presence = server_presence(settings.server_lock_path)
+        presence.__enter__()
         service = None
         if run_scheduler:
             service = SyncService(
@@ -64,11 +69,14 @@ def create_app(
                 settings.lock_path,
                 settings.sync_interval_min,
             )
-            service.start()
+            service.start(backup_runner if settings.backup_enabled else None, settings.backup_time)
         app.state.sync_service = service
-        yield
-        if service:
-            service.shutdown()
+        try:
+            yield
+        finally:
+            if service:
+                service.shutdown()
+            presence.__exit__(None, None, None)
 
     app = FastAPI(
         title="Pulse",
@@ -87,6 +95,7 @@ def create_app(
     app.state.sync_service = None
     app.state.signer = security.SessionSigner(security.load_secret(settings.secret_key_path))
     app.state.limiter = security.AttemptLimiter()
+    app.state.backup = backup_runner
 
     @app.middleware("http")
     async def passcode_gate(

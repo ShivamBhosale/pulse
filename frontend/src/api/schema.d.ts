@@ -55,6 +55,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Summary
+         * @description Rule-based daily summary (templates, no AI). Today uses values so far.
+         */
+        get: operations["get_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/metrics/{metric}": {
         parameters: {
             query?: never;
@@ -296,6 +316,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Backup */
+        post: operations["start_backup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -388,6 +425,34 @@ export interface components {
             last_success: string | null;
             /** Last Error */
             last_error: string | null;
+        };
+        /** BackupStatus */
+        BackupStatus: {
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Schedule
+             * @description Local time of the nightly backup, HH:MM
+             */
+            schedule: string;
+            /** Next Run */
+            next_run: string | null;
+            /** Running */
+            running: boolean;
+            /** Last At */
+            last_at: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Error At */
+            last_error_at: string | null;
+            /** Latest File */
+            latest_file: string | null;
+            /** Latest Size Bytes */
+            latest_size_bytes: number | null;
+            /** Count */
+            count: number;
+            /** Total Bytes */
+            total_bytes: number;
         };
         /** BandPoint */
         BandPoint: {
@@ -1028,6 +1093,7 @@ export interface components {
             /** Streams */
             streams: components["schemas"]["StreamStatus"][];
             backfill: components["schemas"]["BackfillStatus"];
+            backup: components["schemas"]["BackupStatus"];
             /** Metrics */
             metrics: components["schemas"]["MetricInfo"][];
         };
@@ -1087,6 +1153,38 @@ export interface components {
             last_error: string | null;
             /** Last Error At */
             last_error_at: string | null;
+        };
+        /** Summary */
+        Summary: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Headline */
+            headline: string;
+            /** Sentences */
+            sentences: components["schemas"]["SummarySentence"][];
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+        };
+        /** SummarySentence */
+        SummarySentence: {
+            /** Text */
+            text: string;
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "good" | "neutral" | "attention";
+            /**
+             * Metrics
+             * @description Metric keys the sentence is about (for linking)
+             */
+            metrics: string[];
         };
         /** SyncAccepted */
         SyncAccepted: {
@@ -1157,6 +1255,7 @@ export interface components {
             tiles: components["schemas"]["Tile"][];
             heart_rate: components["schemas"]["IntradayHeartRate"];
             steps_curve: components["schemas"]["StepsCurve"];
+            summary: components["schemas"]["Summary"];
         };
         /** ValidationError */
         ValidationError: {
@@ -1285,6 +1384,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Today"];
+                };
+            };
+        };
+    };
+    get_summary: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Summary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1733,6 +1863,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    start_backup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+            /** @description A backup is already running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

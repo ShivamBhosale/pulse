@@ -247,6 +247,60 @@ function ConnectionCard() {
   );
 }
 
+function fmtBytes(n: number): string {
+  return n >= 1e9 ? `${fmtNum(n / 1e9, 1)} GB` : `${fmtNum(n / 1e6, 1)} MB`;
+}
+
+function BackupCard() {
+  const status = useStatus(true);
+  const qc = useQueryClient();
+  const run = useMutation({ mutationFn: api.backup, onSuccess: () => void qc.invalidateQueries({ queryKey: ["status"] }) });
+  const b = status.data?.backup;
+  if (!b) return <Card index={6} title="Backups"><div className="h-20 animate-pulse rounded-lg bg-surface-2/60" /></Card>;
+  const failedLast = b.last_error && (!b.last_at || (b.last_error_at && b.last_error_at > b.last_at));
+  return (
+    <Card index={6} title="Backups" subtitle={b.enabled ? `Nightly at ${b.schedule} · keeps 7 daily, 4 weekly, 6 monthly` : "Nightly backups are off (PULSE_BACKUP_ENABLED=false)"}>
+      <div className="flex flex-col gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden className={failedLast ? "text-serious" : b.last_at ? "text-good-ink" : "text-muted"}>{failedLast ? "▲" : b.last_at ? "●" : "○"}</span>
+            {failedLast ? "Last backup failed" : b.last_at ? `Last backup ${fmtAgo(b.last_at)}` : "No backup yet"}
+          </span>
+          {b.count > 0 && (
+            <span className="num text-ink-2">
+              {b.count} file{b.count === 1 ? "" : "s"} · {fmtBytes(b.total_bytes)}
+            </span>
+          )}
+          {b.next_run && <span className="num text-muted">next {new Date(b.next_run).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false })}</span>}
+        </div>
+        {failedLast && <p className="text-xs text-ink-2">{b.last_error}</p>}
+        {b.latest_file && <p className="num text-xs text-muted">Latest: data/backups/{b.latest_file}{b.latest_size_bytes ? ` (${fmtBytes(b.latest_size_bytes)})` : ""}</p>}
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" className={btn} disabled={b.running || run.isPending} onClick={() => run.mutate()}>
+            {b.running ? "Backing up…" : "Back up now"}
+          </button>
+          <Result m={run} />
+        </div>
+        <details className="text-xs text-muted">
+          <summary className="cursor-pointer">How to restore</summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-4 leading-relaxed">
+            <li>
+              Stop Pulse: <code className="num rounded bg-surface-2 px-1">docker compose stop</code>
+            </li>
+            <li>
+              Restore: <code className="num rounded bg-surface-2 px-1">docker compose run --rm pulse restore /data/backups/&lt;file&gt;</code>
+            </li>
+            <li>
+              Start again: <code className="num rounded bg-surface-2 px-1">docker compose up -d</code>
+            </li>
+          </ol>
+          <p className="mt-1">The current database is kept next to it as a <code>.pre-restore</code> copy. Backups contain all your health data: keep copies somewhere private.</p>
+        </details>
+      </div>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   const q = useSettings();
   if (q.error) return <ErrorNote error={q.error} />;
@@ -260,7 +314,10 @@ export function SettingsPage() {
         <WeightsCard key={JSON.stringify(q.data.readiness_weights)} s={q.data} />
         <PasscodeCard s={q.data} />
       </div>
-      <ConnectionCard />
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <ConnectionCard />
+        <BackupCard />
+      </div>
     </div>
   );
 }

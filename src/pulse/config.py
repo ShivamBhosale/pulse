@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True
     sync_interval_min: int = 15
 
+    # Nightly database backup (local time, HH:MM). PULSE_BACKUP_DIR can point at another disk
+    # (mount it into the container); default is data/backups.
+    backup_enabled: bool = True
+    backup_time: str = Field(default="03:30", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    backup_dir: Path | None = None
+
     goals: Goals = Field(default_factory=Goals)
 
     @property
@@ -81,6 +87,14 @@ class Settings(BaseSettings):
     @property
     def lock_path(self) -> Path:
         return self.data_dir / "sync.lock"
+
+    @property
+    def backups_path(self) -> Path:
+        return self.backup_dir or self.data_dir / "backups"
+
+    @property
+    def server_lock_path(self) -> Path:
+        return self.data_dir / "server.lock"
 
     @property
     def secret_key_path(self) -> Path:

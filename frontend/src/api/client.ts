@@ -25,6 +25,8 @@ export type Settings = Schemas["SettingsOut"];
 export type SettingsIn = Schemas["SettingsIn"];
 export type ReadinessComponent = Schemas["ReadinessComponent"];
 export type Granularity = Schemas["MetricSeries"]["granularity"];
+export type Summary = Schemas["Summary"];
+export type BackupStatus = Schemas["BackupStatus"];
 
 export class Locked extends Error {
   constructor() {
@@ -87,6 +89,8 @@ export const api = {
   exercises: (from: string, to: string) => request<ExerciseList>(`/api/v1/exercises${qs({ from, to })}`),
   exercise: (id: string) => request<ExerciseDetail>(`/api/v1/exercises/${id.split("/").map(encodeURIComponent).join("/")}`),
   records: () => request<Records>("/api/v1/records"),
+  summary: (date: string) => request<Summary>(`/api/v1/summary${qs({ date })}`),
+  backup: () => request<{ job: string }>("/api/v1/backup", { method: "POST" }),
   settings: () => request<Settings>("/api/v1/settings"),
   updateSettings: (body: SettingsIn) =>
     request<Settings>("/api/v1/settings", { method: "PUT", body: JSON.stringify(body) }),

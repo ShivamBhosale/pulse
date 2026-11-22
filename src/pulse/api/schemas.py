@@ -92,6 +92,19 @@ class StepsCurve(BaseModel):
     days_in_median: int
 
 
+class SummarySentence(BaseModel):
+    text: str
+    tone: Literal["good", "neutral", "attention"]
+    metrics: list[str] = Field(description="Metric keys the sentence is about (for linking)")
+
+
+class Summary(BaseModel):
+    date: Day
+    headline: str
+    sentences: list[SummarySentence]
+    generated_at: Instant
+
+
 class Today(BaseModel):
     date: Day
     generated_at: Instant
@@ -100,6 +113,7 @@ class Today(BaseModel):
     tiles: list[Tile]
     heart_rate: IntradayHeartRate
     steps_curve: StepsCurve
+    summary: Summary
 
 
 class SeriesSummary(BaseModel):
@@ -319,6 +333,20 @@ class BackfillStatus(BaseModel):
     last_error: str | None
 
 
+class BackupStatus(BaseModel):
+    enabled: bool
+    schedule: str = Field(description="Local time of the nightly backup, HH:MM")
+    next_run: Instant | None
+    running: bool
+    last_at: Instant | None
+    last_error: str | None
+    last_error_at: Instant | None
+    latest_file: str | None
+    latest_size_bytes: int | None
+    count: int
+    total_bytes: int
+
+
 class Status(BaseModel):
     auth: AuthStatus
     last_sync: Instant | None
@@ -328,6 +356,7 @@ class Status(BaseModel):
     stream_names: list[str] = []
     streams: list[StreamStatus]
     backfill: BackfillStatus
+    backup: BackupStatus
     metrics: list[MetricInfo]
 
 

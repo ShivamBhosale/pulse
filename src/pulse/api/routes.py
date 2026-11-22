@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 
 from pulse import __version__, derive, derived, prefs, queries, security
 from pulse.api import schemas as S
+from pulse.backup import BACKUP_ROW, BackupRunner, list_backups
 from pulse.metrics import CATALOG, Metric
+from pulse.models import SyncState
 from pulse.scheduler import SyncService
 from pulse.sync.engine import AUTH_ROW, BACKFILL_ROW
 from pulse.sync.streams import STREAMS
@@ -46,6 +48,7 @@ def get_status(request: Request, db: DB) -> S.Status:
     states = queries.sync_states(db)
     auth_row = states.pop(AUTH_ROW, None)
     backfill_row = states.pop(BACKFILL_ROW, None)
+    backup_row = states.pop(BACKUP_ROW, None)
     token_present = request.app.state.settings.token_path.exists()
     auth = S.AuthStatus(
         ok=token_present and (auth_row is None or auth_row.last_error is None),
@@ -81,7 +84,28 @@ def get_status(request: Request, db: DB) -> S.Status:
             last_success=backfill_row.last_success if backfill_row else None,
             last_error=backfill_row.last_error if backfill_row else None,
         ),
+        backup=_backup_status(request, backup_row),
         metrics=queries.metrics_available(db),
+    )
+
+
+def _backup_status(request: Request, row: SyncState | None) -> S.BackupStatus:
+    settings = request.app.state.settings
+    runner: BackupRunner = request.app.state.backup
+    files = list_backups(settings.backups_path)
+    service = request.app.state.sync_service
+    return S.BackupStatus(
+        enabled=settings.backup_enabled,
+        schedule=settings.backup_time,
+        next_run=service.next_backup() if service else None,
+        running=runner.running,
+        last_at=row.last_success if row else None,
+        last_error=row.last_error if row else None,
+        last_error_at=row.last_error_at if row else None,
+        latest_file=files[0].path.name if files else None,
+        latest_size_bytes=files[0].size_bytes if files else None,
+        count=len(files),
+        total_bytes=sum(f.size_bytes for f in files),
     )
 
 
@@ -118,7 +142,18 @@ def get_today(request: Request, db: DB) -> S.Today:
         tiles=tiles,
         heart_rate=queries.intraday_heart_rate(db, d, zone),
         steps_curve=queries.steps_curve(db, d, now, zone),
+        summary=queries.summary_out(db, d, now, zone),
     )
+
+
+@router.get("/summary", response_model=S.Summary, name="get_summary", tags=["dashboard"])
+def get_summary(request: Request, db: DB, date: date | None = None) -> S.Summary:
+    """Rule-based daily summary (templates, no AI). Today uses values so far."""
+    today = _today(request)
+    d = date or today
+    if d > today:
+        raise HTTPException(422, "date must not be in the future")
+    return queries.summary_out(db, d, _now(request), request.app.state.zone)
 
 
 @router.get("/metrics/{metric}", response_model=S.MetricSeries, name="get_metric", tags=["data"])
@@ -329,6 +364,21 @@ def start_resync(request: Request, body: S.ResyncIn) -> S.JobAccepted:
     if not _service(request).start_resync(streams, body.since):
         raise HTTPException(status.HTTP_409_CONFLICT, "another job is running")
     return S.JobAccepted(status="started", job="resync")
+
+
+@router.post(
+    "/backup",
+    response_model=S.JobAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    name="start_backup",
+    tags=["meta"],
+    responses={409: {"description": "A backup is already running"}},
+)
+def start_backup(request: Request) -> S.JobAccepted:
+    runner: BackupRunner = request.app.state.backup
+    if not runner.start():
+        raise HTTPException(status.HTTP_409_CONFLICT, "a backup is already running")
+    return S.JobAccepted(status="started", job="backup")
 
 
 # ---- settings ------------------------------------------------------------------------------

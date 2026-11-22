@@ -188,6 +188,9 @@ class _StubService:
     def start_resync(self, streams, since):
         return self.ok
 
+    def next_backup(self):
+        return None
+
 
 def test_jobs(app_env, client):  # noqa: F811
     app = app_env[0]

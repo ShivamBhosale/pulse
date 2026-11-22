@@ -3,6 +3,7 @@ never in the browser."""
 
 from __future__ import annotations
 
+import statistics
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -10,7 +11,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
-from pulse import derived, prefs
+from pulse import derived, prefs, summary
 from pulse.api import schemas as S
 from pulse.datatypes import CivilWindow
 from pulse.metrics import CATALOG, Metric
@@ -778,3 +779,123 @@ def records(session: Session, today: date) -> S.Records:
         ),
     ]
     return S.Records(as_of=today, bests=bests, streaks=streaks)
+
+
+# ---- phase 3: daily summary facts ----------------------------------------------------------
+
+_SUMMARY_VITALS = ("resting_hr", "hrv_rmssd", "spo2_avg")
+_RECORD_LABELS = {
+    "steps": "most steps in a day",
+    "distance_km": "longest distance in a day",
+    "azm": "most active zone minutes in a day",
+    "calories_active": "most active calories in a day",
+    "sleep_main_min": "longest main sleep",
+    "hrv_rmssd": "highest HRV",
+    "readiness": "highest readiness",
+}
+
+
+def _reading(session: Session, metric: str, d: date) -> summary.Reading:
+    t = daily_tile(session, metric, d)
+    prev = daily_tile(session, metric, d - timedelta(days=1))
+    return summary.Reading(
+        value=t.value,
+        median=t.baseline.median if t.baseline else None,
+        status=t.status,
+        prev_status=prev.status,
+    )
+
+
+def day_facts(session: Session, d: date, now: datetime, zone: ZoneInfo) -> summary.DayFacts:
+    """Everything the summary rules need for civil day ``d`` (today: values so far)."""
+    goals = prefs.goals(session)
+    is_today = now.astimezone(zone).date() == d
+    lo, hi = d - timedelta(days=derived.BASELINE_DAYS + 2), d + timedelta(days=1)
+    series = {
+        k: daily_values(session, k, lo, hi)
+        for k in ("hrv_rmssd", "resting_hr", "sleep_main_min", "azm", "bedtime_min")
+    }
+    r = derived.readiness(
+        d,
+        hrv=series["hrv_rmssd"],
+        rhr=series["resting_hr"],
+        sleep_main=series["sleep_main_min"],
+        strain=series["azm"],
+        sleep_goal_min=goals["sleep_min"],
+        weights=prefs.readiness_weights(session),
+    )
+    stored = daily_values(session, "readiness", lo, hi)
+    rb = derived.baseline_at(stored, d)
+    readiness = summary.Reading(
+        value=r.score,
+        median=rb.median if rb else None,
+        status=derived.status(r.score, rb),
+    )
+    sleep_main = series["sleep_main_min"].get(d)
+    bed = series["bedtime_min"]
+    usual_bed = [
+        derived.clock_wrap(v)
+        for v in derived.trailing(bed, d, derived.CONSISTENCY_DAYS, include_day=False)
+        if v is not None
+    ]
+    if is_today:
+        st = steps_so_far_tile(session, d, now, zone, goals["steps"])
+        steps = summary.Reading(st.value, st.baseline.median if st.baseline else None, st.status)
+    else:
+        steps = summary.Reading(daily_values(session, "steps", d, hi).get(d))
+    azm_week = derived.week_to_date(series["azm"], d)
+    rec = records(session, d)
+    met_now = {
+        "steps": (steps.value or 0) >= goals["steps"],
+        "sleep": sleep_main is not None and sleep_main >= goals["sleep_min"],
+        "azm": (azm_week or 0) >= goals["azm_weekly"],
+    }
+    recent = {d, d - timedelta(days=1)} if is_today else {d}
+    units = prefs.get(session, "units")
+    return summary.DayFacts(
+        date=d,
+        is_today=is_today,
+        units="imperial" if units == "imperial" else "metric",
+        goals=goals,
+        readiness=readiness,
+        readiness_parts=tuple(
+            summary.ReadinessPart(c.key, c.score, c.weight, c.value, c.reference)
+            for c in r.components
+        ),
+        sleep_main_min=sleep_main,
+        sleep_debt_min=derived.sleep_debt(series["sleep_main_min"], d, goals["sleep_min"]),
+        bedtime_min=bed.get(d),
+        bedtime_usual_min=statistics.median(usual_bed) if len(usual_bed) >= 5 else None,
+        vitals={k: _reading(session, k, d) for k in _SUMMARY_VITALS}
+        | {
+            "skin_temp_delta": summary.Reading(
+                daily_values(session, "skin_temp_delta", d, hi).get(d)
+            )
+        },
+        steps=steps,
+        azm_week=azm_week,
+        days_left_in_week=6 - d.weekday(),
+        load_ratio=daily_values(session, "load_ratio", d, hi).get(d),
+        streaks=tuple(
+            summary.StreakFact(s.key, s.current, met_now.get(s.key, False), s.goal)
+            for s in rec.streaks
+        ),
+        records=tuple(
+            summary.RecordFact(b.key, _RECORD_LABELS[b.key], b.value, b.unit, b.date)
+            for b in rec.bests
+            if b.key in _RECORD_LABELS and b.date in recent
+        ),
+    )
+
+
+def summary_out(session: Session, d: date, now: datetime, zone: ZoneInfo) -> S.Summary:
+    out = summary.build_summary(day_facts(session, d, now, zone))
+    return S.Summary(
+        date=out.date,
+        headline=out.headline,
+        generated_at=now,
+        sentences=[
+            S.SummarySentence(text=x.text, tone=x.tone, metrics=list(x.metrics))
+            for x in out.sentences
+        ],
+    )

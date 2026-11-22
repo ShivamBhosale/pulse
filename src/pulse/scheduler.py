@@ -10,14 +10,17 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session, sessionmaker
 
 from pulse.auth import AuthError
+from pulse.backup import BackupRunner
 from pulse.client import HealthClient
 from pulse.sync.engine import SyncBusy, SyncEngine, SyncReport
 
 log = logging.getLogger(__name__)
 JOB_ID = "sync"
+BACKUP_JOB_ID = "backup"
 
 
 class SyncService:
@@ -44,6 +47,10 @@ class SyncService:
     def running(self) -> bool:
         return self._running.is_set()
 
+    def next_backup(self) -> datetime | None:
+        job = self._scheduler.get_job(BACKUP_JOB_ID) if self._scheduler else None
+        return job.next_run_time if job else None
+
     @property
     def next_run(self) -> datetime | None:
         if not self._scheduler:
@@ -51,8 +58,18 @@ class SyncService:
         job = self._scheduler.get_job(JOB_ID)
         return job.next_run_time if job else None
 
-    def start(self) -> None:
+    def start(self, backup: BackupRunner | None = None, backup_time: str = "03:30") -> None:
         self._scheduler = BackgroundScheduler(timezone=UTC)
+        if backup is not None:
+            hour, minute = (int(x) for x in backup_time.split(":"))
+            self._scheduler.add_job(
+                backup.run,
+                CronTrigger(hour=hour, minute=minute, timezone=self.zone),
+                id=BACKUP_JOB_ID,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=3600,
+            )
         self._scheduler.add_job(
             self.run_once,
             "interval",

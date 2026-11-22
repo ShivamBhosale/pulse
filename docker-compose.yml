@@ -14,9 +14,13 @@ services:
       PULSE_FIXTURES_DIR: /fixtures
       # Lets `docker compose run -p 127.0.0.1:8765:8765 pulse auth` receive the redirect.
       PULSE_OAUTH_BIND_ADDR: 0.0.0.0
+      # Nightly backups go to /data/backups by default. To keep them on another disk,
+      # uncomment both lines below (and the matching volume) and point the host path there.
+      # PULSE_BACKUP_DIR: /backups
     volumes:
       - ./data:/data
       - ./fixtures:/fixtures
+      # - /mnt/backup-disk/pulse:/backups
     ports:
       - "${PULSE_BIND:-0.0.0.0}:8000:8000"
     healthcheck:

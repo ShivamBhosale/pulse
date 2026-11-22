@@ -319,6 +319,54 @@ def passcode_clear() -> None:
 
 
 @app.command()
+def backup(
+    list_: Annotated[bool, typer.Option("--list", help="List backups instead")] = False,
+) -> None:
+    """Back up the database now (online, safe while the server runs), then rotate."""
+    from pulse.backup import BackupRunner, list_backups
+
+    s = _bootstrap()
+    if list_:
+        files = list_backups(s.backups_path)
+        if not files:
+            console.print(f"No backups in {s.backups_path}")
+        for f in files:
+            console.print(f"{f.path.name}  {f.size_bytes / 1e6:6.1f} MB")
+        return
+    engine = make_engine(s.db_path)
+    migrate(engine)
+    runner = BackupRunner(make_session_factory(engine), s.db_path, s.backups_path, s.zone)
+    made = runner.run()
+    if made is None:
+        console.print("[red]Backup failed or already running; see data/logs/pulse.log[/red]")
+        raise typer.Exit(1)
+    console.print(f"[green]Wrote {made.path}[/green] ({made.size_bytes / 1e6:.1f} MB)")
+
+
+@app.command()
+def restore(
+    file: Annotated[Path, typer.Argument(help="Backup file (.db.gz or .db)")],
+    yes: Annotated[bool, typer.Option("--yes", help="Don't ask for confirmation")] = False,
+) -> None:
+    """Replace the database with a backup. Stop the server first (docker compose stop)."""
+    from pulse.backup import BackupError, restore_backup
+
+    s = _bootstrap()
+    if not yes and not typer.confirm(
+        f"Replace {s.db_path} with {file.name}? The current database is kept as a copy."
+    ):
+        raise typer.Exit(1)
+    try:
+        previous = restore_backup(
+            file, s.db_path, server_lock=s.server_lock_path, sync_lock=s.lock_path
+        )
+    except BackupError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    console.print(f"[green]Restored {file.name}.[/green] Previous database kept at {previous}")
+
+
+@app.command()
 def openapi(
     out: Annotated[Path, typer.Option(help="Where to write the spec")] = Path("openapi.json"),
 ) -> None:

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useToday } from "../api/hooks";
 import { heartRateOption, stepsCurveOption } from "../charts/options";
 import { EChart } from "../components/EChart";
+import { SummaryCard } from "../components/SummaryCard";
 import { Tile } from "../components/Tile";
 import { Card, Empty, ErrorNote } from "../components/ui";
 import { fmtDay, fmtNum } from "../lib/format";
@@ -33,6 +34,7 @@ export function TodayPage() {
       <div className="reveal flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">{fmtDay(data.date, { weekday: "long", day: "numeric", month: "long" })}</h1>
       </div>
+      <SummaryCard key={data.date} today={data.date} initial={data.summary} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         {data.tiles.map((t, i) => (
           <Tile key={t.key} tile={t} index={i} />
