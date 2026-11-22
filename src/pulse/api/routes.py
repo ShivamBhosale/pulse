@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from datetime import date, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
-from pulse import __version__, prefs, queries, security
+from pulse import __version__, derive, derived, prefs, queries, security
 from pulse.api import schemas as S
-from pulse.metrics import CATALOG
+from pulse.metrics import CATALOG, Metric
+from pulse.scheduler import SyncService
 from pulse.sync.engine import AUTH_ROW, BACKFILL_ROW
+from pulse.sync.streams import STREAMS
 
 router = APIRouter(prefix="/api/v1")
 
@@ -70,6 +72,8 @@ def get_status(request: Request, db: DB) -> S.Status:
         last_sync=max(successes) if successes else None,
         next_run=service.next_run if service else None,
         syncing=bool(service and service.running),
+        job=service.job if service else None,
+        stream_names=[st.name for st in STREAMS],
         streams=streams,
         backfill=S.BackfillStatus(
             floor=backfill_row.backfill_floor if backfill_row else None,
@@ -88,7 +92,7 @@ def get_today(request: Request, db: DB) -> S.Today:
     d = now.astimezone(zone).date()
     goals = prefs.goals(db)
     tiles = [
-        queries.readiness_placeholder(d),
+        queries.readiness_tile(db, d),
         queries.daily_tile(
             db,
             "sleep_main_min",
@@ -125,15 +129,113 @@ def get_metric(
     from_: Annotated[date | None, Query(alias="from")] = None,
     to: date | None = None,
     granularity: S.Granularity = "day",
+    band: bool = False,
 ) -> S.MetricSeries:
-    m = CATALOG.get(metric)
+    m = _metric(metric)
+    start, end = _range(request, from_, to)
+    out = queries.metric_series(db, m, start, end, granularity)
+    if band and granularity == "day":
+        out.band = queries.metric_band(db, m, start, end)
+    return out
+
+
+def _metric(key: str) -> Metric:
+    m = CATALOG.get(key)
     if m is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown metric {metric!r}")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown metric {key!r}")
+    return m
+
+
+def _range(
+    request: Request, from_: date | None, to: date | None, default_days: int = 30
+) -> tuple[date, date]:
     end = to or _today(request)
-    start = from_ or end - timedelta(days=29)
+    start = from_ or end - timedelta(days=default_days - 1)
     if start > end:
         raise HTTPException(422, "from must be <= to")
-    return queries.metric_series(db, m, start, end, granularity)
+    return start, end
+
+
+From = Annotated[date | None, Query(alias="from")]
+
+
+@router.get("/series", response_model=S.MultiSeries, name="get_series", tags=["data"])
+def get_series(
+    request: Request,
+    db: DB,
+    metrics: Annotated[list[str], Query(min_length=1, max_length=8)],
+    from_: From = None,
+    to: date | None = None,
+    granularity: S.Granularity = "day",
+) -> S.MultiSeries:
+    """Several metrics over one range (stacked charts, small multiples)."""
+    start, end = _range(request, from_, to)
+    return S.MultiSeries(
+        start=start,
+        end=end,
+        granularity=granularity,
+        series=[queries.metric_series(db, _metric(k), start, end, granularity) for k in metrics],
+    )
+
+
+@router.get(
+    "/metrics/{metric}/weekday",
+    response_model=S.WeekdayProfile,
+    name="get_metric_weekday",
+    tags=["data"],
+)
+def get_metric_weekday(
+    request: Request, db: DB, metric: str, from_: From = None, to: date | None = None
+) -> S.WeekdayProfile:
+    start, end = _range(request, from_, to, 90)
+    return queries.weekday_profile(db, _metric(metric), start, end)
+
+
+@router.get(
+    "/explore/correlate", response_model=S.Correlation, name="get_correlation", tags=["explore"]
+)
+def get_correlation(
+    request: Request, db: DB, a: str, b: str, from_: From = None, to: date | None = None
+) -> S.Correlation:
+    _metric(a), _metric(b)
+    start, end = _range(request, from_, to, 90)
+    return queries.correlate(db, a, b, start, end)
+
+
+@router.get(
+    "/activity/heatmap", response_model=S.Heatmap, name="get_steps_heatmap", tags=["activity"]
+)
+def get_steps_heatmap(
+    request: Request, db: DB, from_: From = None, to: date | None = None
+) -> S.Heatmap:
+    start, end = _range(request, from_, to, 90)
+    return queries.steps_heatmap(db, start, end, request.app.state.zone)
+
+
+@router.get("/exercises", response_model=S.ExerciseList, name="list_exercises", tags=["activity"])
+def list_exercises(
+    request: Request, db: DB, from_: From = None, to: date | None = None
+) -> S.ExerciseList:
+    start, end = _range(request, from_, to, 90)
+    return queries.exercises(db, start, end)
+
+
+@router.get(
+    "/exercises/{exercise_id:path}",
+    response_model=S.ExerciseDetail,
+    name="get_exercise",
+    tags=["activity"],
+)
+def get_exercise(db: DB, exercise_id: str) -> S.ExerciseDetail:
+    out = queries.exercise_detail(db, exercise_id)
+    if out is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such exercise")
+    return out
+
+
+@router.get("/records", response_model=S.Records, name="get_records", tags=["dashboard"])
+def get_records(request: Request, db: DB) -> S.Records:
+    return queries.records(db, _today(request))
 
 
 @router.get(
@@ -180,6 +282,130 @@ def trigger_sync(request: Request) -> S.SyncAccepted:
     if service is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "scheduler disabled")
     return S.SyncAccepted(status="started" if service.trigger() else "already_running")
+
+
+def _service(request: Request) -> SyncService:
+    service: SyncService | None = request.app.state.sync_service
+    if service is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "scheduler disabled")
+    return service
+
+
+BUSY: dict[int | str, dict[str, Any]] = {
+    409: {"description": "Another sync, backfill or resync is running"}
+}
+
+
+@router.post(
+    "/backfill",
+    response_model=S.JobAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    name="start_backfill",
+    tags=["meta"],
+    responses=BUSY,
+)
+def start_backfill(request: Request, body: S.BackfillIn) -> S.JobAccepted:
+    if not _service(request).start_backfill(body.since):
+        raise HTTPException(status.HTTP_409_CONFLICT, "another job is running")
+    return S.JobAccepted(status="started", job="backfill")
+
+
+@router.post(
+    "/resync",
+    response_model=S.JobAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    name="start_resync",
+    tags=["meta"],
+    responses=BUSY,
+)
+def start_resync(request: Request, body: S.ResyncIn) -> S.JobAccepted:
+    names = [st.name for st in STREAMS]
+    streams = body.streams or names
+    unknown = sorted(set(streams) - set(names))
+    if unknown:
+        raise HTTPException(422, f"unknown streams: {', '.join(unknown)}")
+    if body.since > _today(request):
+        raise HTTPException(422, "since must not be in the future")
+    if not _service(request).start_resync(streams, body.since):
+        raise HTTPException(status.HTTP_409_CONFLICT, "another job is running")
+    return S.JobAccepted(status="started", job="resync")
+
+
+# ---- settings ------------------------------------------------------------------------------
+
+
+def _settings_out(db: Session) -> S.SettingsOut:
+    units = prefs.get(db, "units")
+    return S.SettingsOut(
+        goals=S.Goals(**prefs.goals(db)),
+        units="imperial" if units == "imperial" else "metric",
+        readiness_weights=S.ReadinessWeights(**prefs.readiness_weights(db)),
+        readiness_formula=derived.READINESS_FORMULA,
+        passcode_set=_passcode_hash(db) is not None,
+    )
+
+
+@router.get("/settings", response_model=S.SettingsOut, name="get_settings", tags=["settings"])
+def get_settings(db: DB) -> S.SettingsOut:
+    return _settings_out(db)
+
+
+@router.put("/settings", response_model=S.SettingsOut, name="update_settings", tags=["settings"])
+def update_settings(body: S.SettingsIn, db: DB) -> S.SettingsOut:
+    """Partial update. Changing goals or readiness weights recomputes derived metrics."""
+    if body.readiness_weights is not None:
+        w = body.readiness_weights.model_dump()
+        if sum(w.values()) <= 0:
+            raise HTTPException(422, "at least one readiness weight must be above 0")
+        prefs.put(db, "readiness_weights", w)
+    if body.goals is not None:
+        prefs.put(db, "goals", body.goals.model_dump())
+    if body.units is not None:
+        prefs.put(db, "units", body.units)
+    if body.goals is not None or body.readiness_weights is not None:
+        derive.recompute(db)
+    db.commit()
+    return _settings_out(db)
+
+
+@router.put(
+    "/settings/passcode",
+    status_code=status.HTTP_204_NO_CONTENT,
+    name="change_passcode",
+    tags=["settings"],
+    responses={401: {"description": "Wrong current passcode"}, 429: {"description": "Too many"}},
+)
+def change_passcode(
+    request: Request, response: Response, body: S.PasscodeChange, db: DB
+) -> Response:
+    """Set, change (current required) or clear (new = null) the passcode. Every other device
+    is logged out; this one gets a fresh session."""
+    stored = _passcode_hash(db)
+    if stored is not None:
+        limiter: security.AttemptLimiter = request.app.state.limiter
+        key = request.client.host if request.client else "unknown"
+        if not limiter.allowed(key):
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many attempts")
+        if body.current is None or not security.verify_passcode(body.current, stored):
+            limiter.fail(key)
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "wrong current passcode")
+        limiter.reset(key)
+    new_hash = security.hash_passcode(body.new) if body.new else None
+    prefs.put(db, "passcode_hash", new_hash)
+    db.commit()
+    if new_hash:
+        response.set_cookie(
+            security.COOKIE_NAME,
+            request.app.state.signer.issue(security.fingerprint(new_hash)),
+            max_age=security.SESSION_MAX_AGE_S,
+            httponly=True,
+            samesite="strict",
+            path="/",
+        )
+    else:
+        response.delete_cookie(security.COOKIE_NAME, path="/")
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 # ---- passcode session ----------------------------------------------------------------------

@@ -30,6 +30,16 @@ class Goals(BaseModel):
     azm_weekly: int
 
 
+class ReadinessComponent(BaseModel):
+    key: Literal["hrv", "rhr", "sleep", "strain"]
+    label: str
+    score: float | None = Field(description="0-100, null when the input is missing")
+    weight: float = Field(description="Effective weight after renormalising missing parts")
+    value: float | None
+    reference: float | None = Field(description="Baseline median, or the goal for sleep")
+    unit: str
+
+
 class Tile(BaseModel):
     key: str
     label: str
@@ -43,6 +53,8 @@ class Tile(BaseModel):
     spark: list[DayValue]
     note: str | None = None
     goal: float | None = None
+    components: list[ReadinessComponent] | None = None
+    formula: str | None = None
 
 
 class HrPoint(BaseModel):
@@ -97,14 +109,183 @@ class SeriesSummary(BaseModel):
     avg: float | None
 
 
+class BandPoint(BaseModel):
+    date: Day
+    median: float
+    q1: float
+    q3: float
+
+
 class MetricSeries(BaseModel):
     metric: str
     label: str
     unit: str
-    agg: Literal["sum", "avg"]
+    agg: Literal["sum", "avg", "max"]
     granularity: Granularity
     points: list[DayValue]
     summary: SeriesSummary
+    band: list[BandPoint] | None = Field(
+        default=None, description="Rolling 28-day median/IQR per day (day granularity only)"
+    )
+
+
+class MultiSeries(BaseModel):
+    start: Day
+    end: Day
+    granularity: Granularity
+    series: list[MetricSeries]
+
+
+class WeekdayValue(BaseModel):
+    weekday: int = Field(description="0 = Monday")
+    avg: float | None
+    n: int
+
+
+class WeekdayProfile(BaseModel):
+    metric: str
+    label: str
+    unit: str
+    start: Day
+    end: Day
+    days: list[WeekdayValue]
+
+
+class PairPoint(BaseModel):
+    date: Day
+    x: float
+    y: float
+
+
+class Correlation(BaseModel):
+    a: str
+    b: str
+    start: Day
+    end: Day
+    n: int
+    r: float | None
+    strength: str
+    points: list[PairPoint]
+
+
+class Heatmap(BaseModel):
+    start: Day
+    end: Day
+    unit: str
+    values: list[list[float | None]] = Field(
+        description="7 rows (Monday first) x 24 hours: average steps in that hour"
+    )
+    days: list[int] = Field(description="Days with data per weekday row")
+
+
+class ExerciseOut(BaseModel):
+    id: str
+    date: Day
+    start: Instant
+    end: Instant
+    exercise_type: str
+    name: str | None
+    duration_min: float
+    active_min: float | None
+    distance_km: float | None
+    steps: int | None
+    kcal: float | None
+    avg_hr: float | None
+    source: str
+
+
+class ExerciseList(BaseModel):
+    start: Day
+    end: Day
+    exercises: list[ExerciseOut]
+
+
+class ZoneTime(BaseModel):
+    zone: str
+    minutes: int
+
+
+class ExerciseDetail(BaseModel):
+    exercise: ExerciseOut
+    points: list[HrPoint]
+    zones: list[ZoneBand]
+    time_in_zones: list[ZoneTime]
+    max_hr: int | None
+
+
+class RecordOut(BaseModel):
+    key: str
+    label: str
+    unit: str
+    value: float
+    date: Day
+    note: str | None = None
+
+
+class StreakOut(BaseModel):
+    key: str
+    label: str
+    period: Literal["day", "week"]
+    goal: float
+    unit: str
+    current: int
+    current_start: Day | None
+    longest: int
+    longest_end: Day | None
+
+
+class Records(BaseModel):
+    as_of: Day
+    bests: list[RecordOut]
+    streaks: list[StreakOut]
+
+
+class ReadinessWeights(BaseModel):
+    hrv: float = Field(ge=0, le=100)
+    rhr: float = Field(ge=0, le=100)
+    sleep: float = Field(ge=0, le=100)
+    strain: float = Field(ge=0, le=100)
+
+
+class SettingsOut(BaseModel):
+    goals: Goals
+    units: Literal["metric", "imperial"]
+    readiness_weights: ReadinessWeights
+    readiness_formula: str
+    passcode_set: bool
+
+
+class GoalsIn(BaseModel):
+    sleep_min: int = Field(ge=180, le=720)
+    steps: int = Field(ge=1000, le=50000)
+    azm_weekly: int = Field(ge=10, le=1500)
+
+
+class SettingsIn(BaseModel):
+    goals: GoalsIn | None = None
+    units: Literal["metric", "imperial"] | None = None
+    readiness_weights: ReadinessWeights | None = None
+
+
+class PasscodeChange(BaseModel):
+    current: str | None = Field(default=None, pattern=r"^\d{4,6}$")
+    new: str | None = Field(
+        default=None, pattern=r"^\d{4,6}$", description="null clears the passcode"
+    )
+
+
+class BackfillIn(BaseModel):
+    since: Day | None = Field(default=None, description="Default: discover earliest data")
+
+
+class ResyncIn(BaseModel):
+    since: Day
+    streams: list[str] | None = Field(default=None, description="Default: every stream")
+
+
+class JobAccepted(BaseModel):
+    status: Literal["started"]
+    job: str
 
 
 class MetricInfo(BaseModel):
@@ -143,6 +324,8 @@ class Status(BaseModel):
     last_sync: Instant | None
     next_run: Instant | None
     syncing: bool
+    job: str | None = Field(default=None, description="sync | backfill | resync while running")
+    stream_names: list[str] = []
     streams: list[StreamStatus]
     backfill: BackfillStatus
     metrics: list[MetricInfo]

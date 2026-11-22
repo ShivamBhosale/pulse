@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-Agg = Literal["sum", "avg"]
+Agg = Literal["sum", "avg", "max"]
 Better = Literal["up", "down", "none"]
 
 
@@ -56,5 +56,29 @@ CATALOG: dict[str, Metric] = {
         _M("sleep_awake_min", "Awake in bed", "min", "avg", "down", "sleep"),
         _M("bedtime_min", "Bedtime", "min", "avg", "none", "sleep"),
         _M("waketime_min", "Wake time", "min", "avg", "none", "sleep"),
+        _M("spo2_high", "Blood oxygen (high)", "%", "avg", "up", "heart", 1),
+        _M("skin_temp_nightly", "Skin temperature (nightly)", "°C", "avg", "none", "heart", 2),
+        _M("skin_temp_baseline", "Skin temperature (baseline)", "°C", "avg", "none", "heart", 2),
+        _M("hr_zone_min_light", "Time in light zone", "min", "sum", "none", "heart"),
+        _M("hr_zone_min_moderate", "Time in fat-burn zone", "min", "sum", "up", "heart"),
+        _M("hr_zone_min_vigorous", "Time in cardio zone", "min", "sum", "up", "heart"),
+        _M("hr_zone_min_peak", "Time in peak zone", "min", "sum", "up", "heart"),
+        _M("hr_zone_kcal_light", "Calories in light zone", "kcal", "sum", "none", "activity"),
+        _M("hr_zone_kcal_moderate", "Calories in fat-burn zone", "kcal", "sum", "none", "activity"),
+        _M("hr_zone_kcal_vigorous", "Calories in cardio zone", "kcal", "sum", "none", "activity"),
+        _M("hr_zone_kcal_peak", "Calories in peak zone", "kcal", "sum", "none", "activity"),
+        # ---- derived (pulse.derive recomputes these after every sync) ----
+        _M("readiness", "Readiness", "score", "avg", "up", "derived"),
+        _M("strain", "Strain (AZM-weighted)", "min", "sum", "none", "derived"),
+        _M("load_ratio", "Load ratio (7d:28d)", "ratio", "avg", "none", "derived", 2),
+        _M("sleep_debt_min", "Sleep debt (7 nights)", "min", "avg", "down", "derived"),
+        _M("bedtime_sd_min", "Bedtime variability", "min", "avg", "down", "derived"),
+        _M("waketime_sd_min", "Wake time variability", "min", "avg", "down", "derived"),
+        _M("azm_week", "AZM this week", "min", "max", "up", "derived"),
+        _M("calories_bmr", "Resting calories (est.)", "kcal", "sum", "none", "derived"),
+        _M("sedentary_longest_min", "Longest sedentary stretch", "min", "avg", "down", "derived"),
     )
 }
+
+
+DERIVED_KEYS: tuple[str, ...] = tuple(k for k, m in CATALOG.items() if m.group == "derived")

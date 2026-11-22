@@ -72,6 +72,128 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Series
+         * @description Several metrics over one range (stacked charts, small multiples).
+         */
+        get: operations["get_series"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/{metric}/weekday": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Metric Weekday */
+        get: operations["get_metric_weekday"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/explore/correlate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Correlation */
+        get: operations["get_correlation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity/heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Steps Heatmap */
+        get: operations["get_steps_heatmap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exercises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Exercises */
+        get: operations["list_exercises"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exercises/{exercise_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Exercise */
+        get: operations["get_exercise"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Records */
+        get: operations["get_records"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/intraday/heart-rate": {
         parameters: {
             query?: never;
@@ -140,6 +262,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Backfill */
+        post: operations["start_backfill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/resync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Resync */
+        post: operations["start_resync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings"];
+        /**
+         * Update Settings
+         * @description Partial update. Changing goals or readiness weights recomputes derived metrics.
+         */
+        put: operations["update_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/passcode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change Passcode
+         * @description Set, change (current required) or clear (new = null) the passcode. Every other device
+         *     is logged out; this one gets a fresh session.
+         */
+        put: operations["change_passcode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/session": {
         parameters: {
             query?: never;
@@ -172,6 +370,14 @@ export interface components {
             /** Checked At */
             checked_at: string | null;
         };
+        /** BackfillIn */
+        BackfillIn: {
+            /**
+             * Since
+             * @description Default: discover earliest data
+             */
+            since?: string | null;
+        };
         /** BackfillStatus */
         BackfillStatus: {
             /** Floor */
@@ -182,6 +388,20 @@ export interface components {
             last_success: string | null;
             /** Last Error */
             last_error: string | null;
+        };
+        /** BandPoint */
+        BandPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Median */
+            median: number;
+            /** Q1 */
+            q1: number;
+            /** Q3 */
+            q3: number;
         };
         /** BaselineOut */
         BaselineOut: {
@@ -194,6 +414,31 @@ export interface components {
             /** N */
             n: number;
         };
+        /** Correlation */
+        Correlation: {
+            /** A */
+            a: string;
+            /** B */
+            b: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** N */
+            n: number;
+            /** R */
+            r: number | null;
+            /** Strength */
+            strength: string;
+            /** Points */
+            points: components["schemas"]["PairPoint"][];
+        };
         /** DayValue */
         DayValue: {
             /**
@@ -204,8 +449,82 @@ export interface components {
             /** Value */
             value: number | null;
         };
+        /** ExerciseDetail */
+        ExerciseDetail: {
+            exercise: components["schemas"]["ExerciseOut"];
+            /** Points */
+            points: components["schemas"]["HrPoint"][];
+            /** Zones */
+            zones: components["schemas"]["ZoneBand"][];
+            /** Time In Zones */
+            time_in_zones: components["schemas"]["ZoneTime"][];
+            /** Max Hr */
+            max_hr: number | null;
+        };
+        /** ExerciseList */
+        ExerciseList: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Exercises */
+            exercises: components["schemas"]["ExerciseOut"][];
+        };
+        /** ExerciseOut */
+        ExerciseOut: {
+            /** Id */
+            id: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /** Exercise Type */
+            exercise_type: string;
+            /** Name */
+            name: string | null;
+            /** Duration Min */
+            duration_min: number;
+            /** Active Min */
+            active_min: number | null;
+            /** Distance Km */
+            distance_km: number | null;
+            /** Steps */
+            steps: number | null;
+            /** Kcal */
+            kcal: number | null;
+            /** Avg Hr */
+            avg_hr: number | null;
+            /** Source */
+            source: string;
+        };
         /** Goals */
         Goals: {
+            /** Sleep Min */
+            sleep_min: number;
+            /** Steps */
+            steps: number;
+            /** Azm Weekly */
+            azm_weekly: number;
+        };
+        /** GoalsIn */
+        GoalsIn: {
             /** Sleep Min */
             sleep_min: number;
             /** Steps */
@@ -224,6 +543,31 @@ export interface components {
             status: string;
             /** Version */
             version: string;
+        };
+        /** Heatmap */
+        Heatmap: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Values
+             * @description 7 rows (Monday first) x 24 hours: average steps in that hour
+             */
+            values: (number | null)[][];
+            /**
+             * Days
+             * @description Days with data per weekday row
+             */
+            days: number[];
         };
         /** HrPoint */
         HrPoint: {
@@ -254,6 +598,16 @@ export interface components {
             periods: components["schemas"]["Period"][];
             /** Resting Hr */
             resting_hr: number | null;
+        };
+        /** JobAccepted */
+        JobAccepted: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "started";
+            /** Job */
+            job: string;
         };
         /** MetricInfo */
         MetricInfo: {
@@ -290,7 +644,7 @@ export interface components {
              * Agg
              * @enum {string}
              */
-            agg: "sum" | "avg";
+            agg: "sum" | "avg" | "max";
             /**
              * Granularity
              * @enum {string}
@@ -299,6 +653,53 @@ export interface components {
             /** Points */
             points: components["schemas"]["DayValue"][];
             summary: components["schemas"]["SeriesSummary"];
+            /**
+             * Band
+             * @description Rolling 28-day median/IQR per day (day granularity only)
+             */
+            band?: components["schemas"]["BandPoint"][] | null;
+        };
+        /** MultiSeries */
+        MultiSeries: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Granularity
+             * @enum {string}
+             */
+            granularity: "day" | "week" | "month";
+            /** Series */
+            series: components["schemas"]["MetricSeries"][];
+        };
+        /** PairPoint */
+        PairPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** PasscodeChange */
+        PasscodeChange: {
+            /** Current */
+            current?: string | null;
+            /**
+             * New
+             * @description null clears the passcode
+             */
+            new?: string | null;
         };
         /** PasscodeIn */
         PasscodeIn: {
@@ -325,6 +726,89 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** ReadinessComponent */
+        ReadinessComponent: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "hrv" | "rhr" | "sleep" | "strain";
+            /** Label */
+            label: string;
+            /**
+             * Score
+             * @description 0-100, null when the input is missing
+             */
+            score: number | null;
+            /**
+             * Weight
+             * @description Effective weight after renormalising missing parts
+             */
+            weight: number;
+            /** Value */
+            value: number | null;
+            /**
+             * Reference
+             * @description Baseline median, or the goal for sleep
+             */
+            reference: number | null;
+            /** Unit */
+            unit: string;
+        };
+        /** ReadinessWeights */
+        ReadinessWeights: {
+            /** Hrv */
+            hrv: number;
+            /** Rhr */
+            rhr: number;
+            /** Sleep */
+            sleep: number;
+            /** Strain */
+            strain: number;
+        };
+        /** RecordOut */
+        RecordOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: number;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** Records */
+        Records: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Bests */
+            bests: components["schemas"]["RecordOut"][];
+            /** Streaks */
+            streaks: components["schemas"]["StreakOut"][];
+        };
+        /** ResyncIn */
+        ResyncIn: {
+            /**
+             * Since
+             * Format: date
+             */
+            since: string;
+            /**
+             * Streams
+             * @description Default: every stream
+             */
+            streams?: string[] | null;
+        };
         /** SeriesSummary */
         SeriesSummary: {
             /** Count */
@@ -342,6 +826,27 @@ export interface components {
             passcode_required: boolean;
             /** Authenticated */
             authenticated: boolean;
+        };
+        /** SettingsIn */
+        SettingsIn: {
+            goals?: components["schemas"]["GoalsIn"] | null;
+            /** Units */
+            units?: ("metric" | "imperial") | null;
+            readiness_weights?: components["schemas"]["ReadinessWeights"] | null;
+        };
+        /** SettingsOut */
+        SettingsOut: {
+            goals: components["schemas"]["Goals"];
+            /**
+             * Units
+             * @enum {string}
+             */
+            units: "metric" | "imperial";
+            readiness_weights: components["schemas"]["ReadinessWeights"];
+            /** Readiness Formula */
+            readiness_formula: string;
+            /** Passcode Set */
+            passcode_set: boolean;
         };
         /** SleepConsistency */
         SleepConsistency: {
@@ -510,6 +1015,16 @@ export interface components {
             next_run: string | null;
             /** Syncing */
             syncing: boolean;
+            /**
+             * Job
+             * @description sync | backfill | resync while running
+             */
+            job?: string | null;
+            /**
+             * Stream Names
+             * @default []
+             */
+            stream_names: string[];
             /** Streams */
             streams: components["schemas"]["StreamStatus"][];
             backfill: components["schemas"]["BackfillStatus"];
@@ -535,6 +1050,30 @@ export interface components {
             median: number[];
             /** Days In Median */
             days_in_median: number;
+        };
+        /** StreakOut */
+        StreakOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "day" | "week";
+            /** Goal */
+            goal: number;
+            /** Unit */
+            unit: string;
+            /** Current */
+            current: number;
+            /** Current Start */
+            current_start: string | null;
+            /** Longest */
+            longest: number;
+            /** Longest End */
+            longest_end: string | null;
         };
         /** StreamStatus */
         StreamStatus: {
@@ -594,6 +1133,10 @@ export interface components {
             note?: string | null;
             /** Goal */
             goal?: number | null;
+            /** Components */
+            components?: components["schemas"]["ReadinessComponent"][] | null;
+            /** Formula */
+            formula?: string | null;
         };
         /** Today */
         Today: {
@@ -628,6 +1171,39 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** WeekdayProfile */
+        WeekdayProfile: {
+            /** Metric */
+            metric: string;
+            /** Label */
+            label: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Days */
+            days: components["schemas"]["WeekdayValue"][];
+        };
+        /** WeekdayValue */
+        WeekdayValue: {
+            /**
+             * Weekday
+             * @description 0 = Monday
+             */
+            weekday: number;
+            /** Avg */
+            avg: number | null;
+            /** N */
+            n: number;
+        };
         /** ZoneBand */
         ZoneBand: {
             /** Zone */
@@ -636,6 +1212,13 @@ export interface components {
             min_bpm: number;
             /** Max Bpm */
             max_bpm: number;
+        };
+        /** ZoneTime */
+        ZoneTime: {
+            /** Zone */
+            zone: string;
+            /** Minutes */
+            minutes: number;
         };
     };
     responses: never;
@@ -712,6 +1295,7 @@ export interface operations {
                 from?: string | null;
                 to?: string | null;
                 granularity?: "day" | "week" | "month";
+                band?: boolean;
             };
             header?: never;
             path: {
@@ -737,6 +1321,223 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_series: {
+        parameters: {
+            query: {
+                metrics: string[];
+                from?: string | null;
+                to?: string | null;
+                granularity?: "day" | "week" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MultiSeries"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_metric_weekday: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                metric: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeekdayProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_correlation: {
+        parameters: {
+            query: {
+                a: string;
+                b: string;
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Correlation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_steps_heatmap: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Heatmap"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_exercises: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExerciseList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_exercise: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exercise_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExerciseDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_records: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Records"];
                 };
             };
         };
@@ -852,6 +1653,184 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SyncAccepted"];
                 };
+            };
+        };
+    };
+    start_backfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackfillIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+            /** @description Another sync, backfill or resync is running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_resync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResyncIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+            /** @description Another sync, backfill or resync is running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+        };
+    };
+    update_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_passcode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasscodeChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Wrong current passcode */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

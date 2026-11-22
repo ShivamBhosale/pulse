@@ -134,6 +134,16 @@
               "default": "day",
               "title": "Granularity"
             }
+          },
+          {
+            "name": "band",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Band"
+            }
           }
         ],
         "responses": {
@@ -153,6 +163,461 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/series": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Get Series",
+        "description": "Several metrics over one range (stacked charts, small multiples).",
+        "operationId": "get_series",
+        "parameters": [
+          {
+            "name": "metrics",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 8,
+              "title": "Metrics"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string",
+              "default": "day",
+              "title": "Granularity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiSeries"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metrics/{metric}/weekday": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Get Metric Weekday",
+        "operationId": "get_metric_weekday",
+        "parameters": [
+          {
+            "name": "metric",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeekdayProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/explore/correlate": {
+      "get": {
+        "tags": [
+          "explore"
+        ],
+        "summary": "Get Correlation",
+        "operationId": "get_correlation",
+        "parameters": [
+          {
+            "name": "a",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "A"
+            }
+          },
+          {
+            "name": "b",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "B"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Correlation"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/activity/heatmap": {
+      "get": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "Get Steps Heatmap",
+        "operationId": "get_steps_heatmap",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Heatmap"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exercises": {
+      "get": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "List Exercises",
+        "operationId": "list_exercises",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exercises/{exercise_id}": {
+      "get": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "Get Exercise",
+        "operationId": "get_exercise",
+        "parameters": [
+          {
+            "name": "exercise_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Exercise Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/records": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Records",
+        "operationId": "get_records",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Records"
                 }
               }
             }
@@ -348,6 +813,196 @@
         }
       }
     },
+    "/api/v1/backfill": {
+      "post": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Start Backfill",
+        "operationId": "start_backfill",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobAccepted"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another sync, backfill or resync is running"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resync": {
+      "post": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Start Resync",
+        "operationId": "start_resync",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResyncIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobAccepted"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another sync, backfill or resync is running"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Get Settings",
+        "operationId": "get_settings",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Update Settings",
+        "description": "Partial update. Changing goals or readiness weights recomputes derived metrics.",
+        "operationId": "update_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings/passcode": {
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Change Passcode",
+        "description": "Set, change (current required) or clear (new = null) the passcode. Every other device\nis logged out; this one gets a fresh session.",
+        "operationId": "change_passcode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasscodeChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Wrong current passcode"
+          },
+          "429": {
+            "description": "Too many"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/session": {
       "get": {
         "tags": [
@@ -460,6 +1115,25 @@
         ],
         "title": "AuthStatus"
       },
+      "BackfillIn": {
+        "properties": {
+          "since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since",
+            "description": "Default: discover earliest data"
+          }
+        },
+        "type": "object",
+        "title": "BackfillIn"
+      },
       "BackfillStatus": {
         "properties": {
           "floor": {
@@ -519,6 +1193,35 @@
         ],
         "title": "BackfillStatus"
       },
+      "BandPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "median": {
+            "type": "number",
+            "title": "Median"
+          },
+          "q1": {
+            "type": "number",
+            "title": "Q1"
+          },
+          "q3": {
+            "type": "number",
+            "title": "Q3"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "median",
+          "q1",
+          "q3"
+        ],
+        "title": "BandPoint"
+      },
       "BaselineOut": {
         "properties": {
           "median": {
@@ -547,6 +1250,66 @@
         ],
         "title": "BaselineOut"
       },
+      "Correlation": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "title": "A"
+          },
+          "b": {
+            "type": "string",
+            "title": "B"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R"
+          },
+          "strength": {
+            "type": "string",
+            "title": "Strength"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/PairPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b",
+          "start",
+          "end",
+          "n",
+          "r",
+          "strength",
+          "points"
+        ],
+        "title": "Correlation"
+      },
       "DayValue": {
         "properties": {
           "date": {
@@ -573,6 +1336,200 @@
         ],
         "title": "DayValue"
       },
+      "ExerciseDetail": {
+        "properties": {
+          "exercise": {
+            "$ref": "#/components/schemas/ExerciseOut"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/HrPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneBand"
+            },
+            "type": "array",
+            "title": "Zones"
+          },
+          "time_in_zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneTime"
+            },
+            "type": "array",
+            "title": "Time In Zones"
+          },
+          "max_hr": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Hr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise",
+          "points",
+          "zones",
+          "time_in_zones",
+          "max_hr"
+        ],
+        "title": "ExerciseDetail"
+      },
+      "ExerciseList": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/ExerciseOut"
+            },
+            "type": "array",
+            "title": "Exercises"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "exercises"
+        ],
+        "title": "ExerciseList"
+      },
+      "ExerciseOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "exercise_type": {
+            "type": "string",
+            "title": "Exercise Type"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "duration_min": {
+            "type": "number",
+            "title": "Duration Min"
+          },
+          "active_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Min"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "kcal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal"
+          },
+          "avg_hr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Hr"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "date",
+          "start",
+          "end",
+          "exercise_type",
+          "name",
+          "duration_min",
+          "active_min",
+          "distance_km",
+          "steps",
+          "kcal",
+          "avg_hr",
+          "source"
+        ],
+        "title": "ExerciseOut"
+      },
       "Goals": {
         "properties": {
           "sleep_min": {
@@ -595,6 +1552,35 @@
           "azm_weekly"
         ],
         "title": "Goals"
+      },
+      "GoalsIn": {
+        "properties": {
+          "sleep_min": {
+            "type": "integer",
+            "maximum": 720.0,
+            "minimum": 180.0,
+            "title": "Sleep Min"
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 50000.0,
+            "minimum": 1000.0,
+            "title": "Steps"
+          },
+          "azm_weekly": {
+            "type": "integer",
+            "maximum": 1500.0,
+            "minimum": 10.0,
+            "title": "Azm Weekly"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sleep_min",
+          "steps",
+          "azm_weekly"
+        ],
+        "title": "GoalsIn"
       },
       "HTTPValidationError": {
         "properties": {
@@ -626,6 +1612,59 @@
           "version"
         ],
         "title": "Health"
+      },
+      "Heatmap": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "values": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Values",
+            "description": "7 rows (Monday first) x 24 hours: average steps in that hour"
+          },
+          "days": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Days",
+            "description": "Days with data per weekday row"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "unit",
+          "values",
+          "days"
+        ],
+        "title": "Heatmap"
       },
       "HrPoint": {
         "properties": {
@@ -706,6 +1745,25 @@
         ],
         "title": "IntradayHeartRate"
       },
+      "JobAccepted": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "started",
+            "title": "Status"
+          },
+          "job": {
+            "type": "string",
+            "title": "Job"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "job"
+        ],
+        "title": "JobAccepted"
+      },
       "MetricInfo": {
         "properties": {
           "key": {
@@ -769,7 +1827,8 @@
             "type": "string",
             "enum": [
               "sum",
-              "avg"
+              "avg",
+              "max"
             ],
             "title": "Agg"
           },
@@ -791,6 +1850,21 @@
           },
           "summary": {
             "$ref": "#/components/schemas/SeriesSummary"
+          },
+          "band": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BandPoint"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band",
+            "description": "Rolling 28-day median/IQR per day (day granularity only)"
           }
         },
         "type": "object",
@@ -804,6 +1878,99 @@
           "summary"
         ],
         "title": "MetricSeries"
+      },
+      "MultiSeries": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "granularity": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month"
+            ],
+            "title": "Granularity"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSeries"
+            },
+            "type": "array",
+            "title": "Series"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "granularity",
+          "series"
+        ],
+        "title": "MultiSeries"
+      },
+      "PairPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "x",
+          "y"
+        ],
+        "title": "PairPoint"
+      },
+      "PasscodeChange": {
+        "properties": {
+          "current": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4,6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "new": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4,6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New",
+            "description": "null clears the passcode"
+          }
+        },
+        "type": "object",
+        "title": "PasscodeChange"
       },
       "PasscodeIn": {
         "properties": {
@@ -852,6 +2019,219 @@
           "label"
         ],
         "title": "Period"
+      },
+      "ReadinessComponent": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "hrv",
+              "rhr",
+              "sleep",
+              "strain"
+            ],
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "0-100, null when the input is missing"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight",
+            "description": "Effective weight after renormalising missing parts"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference",
+            "description": "Baseline median, or the goal for sleep"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "score",
+          "weight",
+          "value",
+          "reference",
+          "unit"
+        ],
+        "title": "ReadinessComponent"
+      },
+      "ReadinessWeights": {
+        "properties": {
+          "hrv": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Hrv"
+          },
+          "rhr": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Rhr"
+          },
+          "sleep": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Sleep"
+          },
+          "strain": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Strain"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hrv",
+          "rhr",
+          "sleep",
+          "strain"
+        ],
+        "title": "ReadinessWeights"
+      },
+      "RecordOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "unit",
+          "value",
+          "date"
+        ],
+        "title": "RecordOut"
+      },
+      "Records": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of"
+          },
+          "bests": {
+            "items": {
+              "$ref": "#/components/schemas/RecordOut"
+            },
+            "type": "array",
+            "title": "Bests"
+          },
+          "streaks": {
+            "items": {
+              "$ref": "#/components/schemas/StreakOut"
+            },
+            "type": "array",
+            "title": "Streaks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "bests",
+          "streaks"
+        ],
+        "title": "Records"
+      },
+      "ResyncIn": {
+        "properties": {
+          "since": {
+            "type": "string",
+            "format": "date",
+            "title": "Since"
+          },
+          "streams": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Streams",
+            "description": "Default: every stream"
+          }
+        },
+        "type": "object",
+        "required": [
+          "since"
+        ],
+        "title": "ResyncIn"
       },
       "SeriesSummary": {
         "properties": {
@@ -919,6 +2299,82 @@
           "authenticated"
         ],
         "title": "SessionState"
+      },
+      "SettingsIn": {
+        "properties": {
+          "goals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoalsIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "metric",
+                  "imperial"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          },
+          "readiness_weights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadinessWeights"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "SettingsIn"
+      },
+      "SettingsOut": {
+        "properties": {
+          "goals": {
+            "$ref": "#/components/schemas/Goals"
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "metric",
+              "imperial"
+            ],
+            "title": "Units"
+          },
+          "readiness_weights": {
+            "$ref": "#/components/schemas/ReadinessWeights"
+          },
+          "readiness_formula": {
+            "type": "string",
+            "title": "Readiness Formula"
+          },
+          "passcode_set": {
+            "type": "boolean",
+            "title": "Passcode Set"
+          }
+        },
+        "type": "object",
+        "required": [
+          "goals",
+          "units",
+          "readiness_weights",
+          "readiness_formula",
+          "passcode_set"
+        ],
+        "title": "SettingsOut"
       },
       "SleepConsistency": {
         "properties": {
@@ -1500,6 +2956,26 @@
             "type": "boolean",
             "title": "Syncing"
           },
+          "job": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job",
+            "description": "sync | backfill | resync while running"
+          },
+          "stream_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Stream Names",
+            "default": []
+          },
           "streams": {
             "items": {
               "$ref": "#/components/schemas/StreamStatus"
@@ -1572,6 +3048,79 @@
           "days_in_median"
         ],
         "title": "StepsCurve"
+      },
+      "StreakOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week"
+            ],
+            "title": "Period"
+          },
+          "goal": {
+            "type": "number",
+            "title": "Goal"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "current": {
+            "type": "integer",
+            "title": "Current"
+          },
+          "current_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Start"
+          },
+          "longest": {
+            "type": "integer",
+            "title": "Longest"
+          },
+          "longest_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longest End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "period",
+          "goal",
+          "unit",
+          "current",
+          "current_start",
+          "longest",
+          "longest_end"
+        ],
+        "title": "StreakOut"
       },
       "StreamStatus": {
         "properties": {
@@ -1761,6 +3310,31 @@
               }
             ],
             "title": "Goal"
+          },
+          "components": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReadinessComponent"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Components"
+          },
+          "formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formula"
           }
         },
         "type": "object",
@@ -1871,6 +3445,80 @@
         ],
         "title": "ValidationError"
       },
+      "WeekdayProfile": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/WeekdayValue"
+            },
+            "type": "array",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "label",
+          "unit",
+          "start",
+          "end",
+          "days"
+        ],
+        "title": "WeekdayProfile"
+      },
+      "WeekdayValue": {
+        "properties": {
+          "weekday": {
+            "type": "integer",
+            "title": "Weekday",
+            "description": "0 = Monday"
+          },
+          "avg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weekday",
+          "avg",
+          "n"
+        ],
+        "title": "WeekdayValue"
+      },
       "ZoneBand": {
         "properties": {
           "zone": {
@@ -1893,6 +3541,24 @@
           "max_bpm"
         ],
         "title": "ZoneBand"
+      },
+      "ZoneTime": {
+        "properties": {
+          "zone": {
+            "type": "string",
+            "title": "Zone"
+          },
+          "minutes": {
+            "type": "integer",
+            "title": "Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone",
+          "minutes"
+        ],
+        "title": "ZoneTime"
       }
     }
   }

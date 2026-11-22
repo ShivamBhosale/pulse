@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from pulse import derive
 from pulse.auth import AuthError
 from pulse.client import HealthApiError, HealthClient, Unauthorized
 from pulse.datatypes import CivilWindow
@@ -171,6 +172,8 @@ class SyncEngine:
                 log.info("stream %s ok: %d rows [%s, %s)", stream.name, rows, start, end)
             if report.auth_ok:
                 self._record_auth(True)
+            if any(r.ok for r in report.results):
+                derive.recompute_safely(self.sessions)
         report.finished_at = self.now()
         report.requests = self.client.request_count - start_requests
         return report
@@ -249,6 +252,7 @@ class SyncEngine:
                     except HealthApiError as exc:
                         err = f"{exc.status} {exc.code}: {exc.message}"[:500]
                 report.results.append(StreamResult(stream.name, err is None, rows, err))
+            derive.recompute_safely(self.sessions)
         report.finished_at = self.now()
         report.requests = self.client.request_count - start_requests
         return report
@@ -301,6 +305,7 @@ class SyncEngine:
                 st.last_error = "; ".join(f"{k}: {v}" for k, v in failures.items()) or None
                 s.commit()
             log.info("backfill finished; failures=%s", sorted(failures) or "none")
+            derive.recompute_safely(self.sessions)
         report.finished_at = self.now()
         report.requests = self.client.request_count - start_requests
         return report

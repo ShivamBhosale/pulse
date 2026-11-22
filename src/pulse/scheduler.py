@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -37,6 +37,8 @@ class SyncService:
         self._scheduler: BackgroundScheduler | None = None
         self._running = threading.Event()
         self.last_report: SyncReport | None = None
+        self.job: str | None = None
+        self._guard = threading.Lock()
 
     @property
     def running(self) -> bool:
@@ -69,32 +71,59 @@ class SyncService:
             self._scheduler.shutdown(wait=False)
             self._scheduler = None
 
-    def run_once(self) -> SyncReport | None:
-        if self._running.is_set():
+    def _claim(self, job: str) -> bool:
+        """At most one job (sync, backfill or resync) at a time in this process; the file
+        lock keeps it exclusive with CLI runs too."""
+        with self._guard:
+            if self._running.is_set():
+                return False
+            self._running.set()
+            self.job = job
+            return True
+
+    def _run(self, job: str, work: Callable[[SyncEngine], SyncReport]) -> SyncReport | None:
+        if not self._claim(job):
             return None
-        self._running.set()
+        return self._execute(job, work)
+
+    def _execute(self, job: str, work: Callable[[SyncEngine], SyncReport]) -> SyncReport | None:
         try:
             with self.client_factory() as client:
                 engine = SyncEngine(self.sessions, client, self.zone, lock_path=self.lock_path)
-                report = engine.run_sync()
+                report = work(engine)
             self.last_report = report
-            log.info("sync finished ok=%s requests=%d", report.ok, report.requests)
+            log.info("%s finished ok=%s requests=%d", job, report.ok, report.requests)
             return report
         except SyncBusy:
-            log.info("sync skipped: another sync is running")
+            log.info("%s skipped: another sync is running", job)
             return None
         except AuthError as exc:  # no token at all
-            log.error("sync skipped: %s", exc)
+            log.error("%s skipped: %s", job, exc)
             return None
         except Exception:
-            log.exception("sync crashed")
+            log.exception("%s crashed", job)
             return None
         finally:
+            self.job = None
             self._running.clear()
 
-    def trigger(self) -> bool:
-        """Start a sync in the background now. False if one is already running."""
-        if self._running.is_set():
+    def run_once(self) -> SyncReport | None:
+        return self._run("sync", lambda e: e.run_sync())
+
+    def _start(self, job: str, work: Callable[[SyncEngine], SyncReport]) -> bool:
+        if not self._claim(job):
             return False
-        threading.Thread(target=self.run_once, name="pulse-sync-manual", daemon=True).start()
+        threading.Thread(
+            target=self._execute, args=(job, work), name=f"pulse-{job}", daemon=True
+        ).start()
         return True
+
+    def trigger(self) -> bool:
+        """Start a sync in the background now. False if a job is already running."""
+        return self._start("sync", lambda e: e.run_sync())
+
+    def start_backfill(self, since: date | None) -> bool:
+        return self._start("backfill", lambda e: e.run_backfill(since))
+
+    def start_resync(self, streams: list[str], since: date) -> bool:
+        return self._start("resync", lambda e: e.refill(streams, since))

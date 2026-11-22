@@ -212,20 +212,47 @@ def azm_so_far_tile(
     )
 
 
-def readiness_placeholder(d: date) -> S.Tile:
-    return S.Tile(
-        key="readiness",
-        label="Readiness",
-        unit="score",
-        value=None,
-        value_date=None,
-        delta=None,
-        status="none",
-        better="up",
-        baseline=None,
-        spark=spark({}, d),
-        note="Arrives in phase 2",
+_COMPONENT_META: dict[str, tuple[str, str]] = {
+    "hrv": ("HRV vs baseline", "ms"),
+    "rhr": ("Resting HR vs baseline", "bpm"),
+    "sleep": ("Last night's sleep vs goal", "min"),
+    "strain": ("Yesterday's strain vs baseline", "min"),
+}
+
+
+def readiness_tile(session: Session, d: date) -> S.Tile:
+    """Stored readiness (from pulse.derive) plus a live breakdown of its four parts."""
+    tile = daily_tile(session, "readiness", d, fallback_days=1)
+    ref = tile.value_date or d
+    lo, hi = ref - timedelta(days=derived.BASELINE_DAYS + 2), ref + timedelta(days=1)
+    r = derived.readiness(
+        ref,
+        hrv=daily_values(session, "hrv_rmssd", lo, hi),
+        rhr=daily_values(session, "resting_hr", lo, hi),
+        sleep_main=daily_values(session, "sleep_main_min", lo, hi),
+        strain=daily_values(session, "azm", lo, hi),
+        sleep_goal_min=prefs.goals(session)["sleep_min"],
+        weights=prefs.readiness_weights(session),
     )
+    tile.components = [
+        S.ReadinessComponent(
+            key=c.key,  # type: ignore[arg-type]
+            label=_COMPONENT_META[c.key][0],
+            score=c.score,
+            weight=round(c.weight, 3),
+            value=c.value,
+            reference=c.reference,
+            unit=_COMPONENT_META[c.key][1],
+        )
+        for c in r.components
+    ]
+    tile.formula = derived.READINESS_FORMULA
+    tile.note = "Personal heuristic, not a medical measure" + (
+        f" · {tile.note}" if tile.note else ""
+    )
+    if tile.value is None:
+        tile.note = "Not enough data yet · personal heuristic"
+    return tile
 
 
 # ---- intraday heart rate -------------------------------------------------------------------
@@ -427,7 +454,7 @@ _BUCKET = {
 def metric_series(
     session: Session, m: Metric, start: date, end_inclusive: date, granularity: S.Granularity
 ) -> S.MetricSeries:
-    agg = "SUM" if m.agg == "sum" and granularity != "day" else "AVG"
+    agg = "AVG" if granularity == "day" else {"sum": "SUM", "avg": "AVG", "max": "MAX"}[m.agg]
     bucket = _BUCKET[granularity]
     rows = session.execute(
         text(
@@ -487,3 +514,267 @@ def metrics_available(session: Session) -> list[S.MetricInfo]:
 
 def sync_states(session: Session) -> dict[str, SyncState]:
     return {s.stream: s for s in session.scalars(select(SyncState))}
+
+
+# ---- phase 2: series, explore, activity, workouts, records ---------------------------------
+
+
+def metric_band(session: Session, m: Metric, start: date, end_inclusive: date) -> list[S.BandPoint]:
+    """Rolling 28-day median/IQR (excluding the day) for every day in the range."""
+    values = daily_values(
+        session, m.key, start - timedelta(days=derived.BASELINE_DAYS), end_inclusive + timedelta(1)
+    )
+    out = []
+    d = start
+    while d <= end_inclusive:
+        b = derived.baseline_at(values, d)
+        if b is not None:
+            out.append(S.BandPoint(date=d, median=b.median, q1=b.q1, q3=b.q3))
+        d += timedelta(days=1)
+    return out
+
+
+def weekday_profile(
+    session: Session, m: Metric, start: date, end_inclusive: date
+) -> S.WeekdayProfile:
+    rows = session.execute(
+        text(
+            "SELECT CAST(strftime('%w', civil_date) AS INTEGER) AS dow, AVG(value), COUNT(*) "
+            "FROM daily_metrics WHERE metric = :metric AND civil_date >= :lo "
+            "AND civil_date <= :hi GROUP BY dow"
+        ),
+        {"metric": m.key, "lo": start.isoformat(), "hi": end_inclusive.isoformat()},
+    ).all()
+    by = {(int(dow) + 6) % 7: (avg, n) for dow, avg, n in rows}  # SQLite 0=Sunday → 0=Monday
+    return S.WeekdayProfile(
+        metric=m.key,
+        label=m.label,
+        unit=m.unit,
+        start=start,
+        end=end_inclusive,
+        days=[
+            S.WeekdayValue(weekday=i, avg=by.get(i, (None, 0))[0], n=by.get(i, (None, 0))[1])
+            for i in range(7)
+        ],
+    )
+
+
+def correlate(session: Session, a: str, b: str, start: date, end_inclusive: date) -> S.Correlation:
+    xa = daily_values(session, a, start, end_inclusive + timedelta(days=1))
+    xb = daily_values(session, b, start, end_inclusive + timedelta(days=1))
+    days = sorted(set(xa) & set(xb))
+    xs, ys = [xa[d] for d in days], [xb[d] for d in days]
+    r = derived.pearson(xs, ys)
+    return S.Correlation(
+        a=a,
+        b=b,
+        start=start,
+        end=end_inclusive,
+        n=len(days),
+        r=None if r is None else round(r, 3),
+        strength=derived.correlation_strength(r),
+        points=[S.PairPoint(date=d, x=x, y=y) for d, x, y in zip(days, xs, ys, strict=True)],
+    )
+
+
+def steps_heatmap(session: Session, start: date, end_inclusive: date, zone: ZoneInfo) -> S.Heatmap:
+    """Average steps per (weekday, local hour). The local hour needs DST-aware conversion, so
+    this sums 15-minute rows server-side (~35k rows a year)."""
+    totals = [[0.0] * 24 for _ in range(7)]
+    days: list[set[date]] = [set() for _ in range(7)]
+    for d, ts, steps in session.execute(
+        select(IntradaySteps.civil_date, IntradaySteps.ts_utc, IntradaySteps.steps).where(
+            IntradaySteps.civil_date >= start, IntradaySteps.civil_date <= end_inclusive
+        )
+    ):
+        local = ts.astimezone(zone)
+        totals[d.weekday()][local.hour] += steps
+        days[d.weekday()].add(d)
+    return S.Heatmap(
+        start=start,
+        end=end_inclusive,
+        unit="steps",
+        values=[
+            [round(v / len(days[w]), 1) if days[w] else None for v in totals[w]] for w in range(7)
+        ],
+        days=[len(x) for x in days],
+    )
+
+
+def _exercise_out(e: Exercise) -> S.ExerciseOut:
+    return S.ExerciseOut(
+        id=e.id,
+        date=e.civil_date,
+        start=e.start_utc,
+        end=e.end_utc,
+        exercise_type=e.exercise_type,
+        name=e.name,
+        duration_min=round((e.end_utc - e.start_utc).total_seconds() / 60, 1),
+        active_min=None if e.active_s is None else round(e.active_s / 60, 1),
+        distance_km=None if e.distance_m is None else round(e.distance_m / 1000, 3),
+        steps=e.steps,
+        kcal=e.kcal,
+        avg_hr=e.avg_hr,
+        source=e.source,
+    )
+
+
+def exercises(session: Session, start: date, end_inclusive: date) -> S.ExerciseList:
+    rows = session.scalars(
+        select(Exercise)
+        .where(Exercise.civil_date >= start, Exercise.civil_date <= end_inclusive)
+        .order_by(Exercise.start_utc.desc())
+    )
+    return S.ExerciseList(
+        start=start, end=end_inclusive, exercises=[_exercise_out(e) for e in rows]
+    )
+
+
+def exercise_detail(session: Session, exercise_id: str) -> S.ExerciseDetail | None:
+    e = session.get(Exercise, exercise_id)
+    if e is None:
+        return None
+    points = [
+        S.HrPoint(t=ts, avg=round(avg, 1), min=lo, max=hi)
+        for ts, avg, lo, hi in session.execute(
+            select(IntradayHR.ts_utc, IntradayHR.bpm_avg, IntradayHR.bpm_min, IntradayHR.bpm_max)
+            .where(IntradayHR.ts_utc >= e.start_utc, IntradayHR.ts_utc < e.end_utc)
+            .order_by(IntradayHR.ts_utc)
+        )
+    ]
+    zone_date = session.execute(
+        select(func.max(HrZoneBound.civil_date)).where(HrZoneBound.civil_date <= e.civil_date)
+    ).scalar()
+    bounds = (
+        {
+            z: (lo, hi)
+            for z, lo, hi in session.execute(
+                select(HrZoneBound.zone, HrZoneBound.min_bpm, HrZoneBound.max_bpm).where(
+                    HrZoneBound.civil_date == zone_date
+                )
+            )
+        }
+        if zone_date
+        else {}
+    )
+    tiz = derived.time_in_zones([p.avg for p in points], bounds) if points and bounds else {}
+    order = ["below", *sorted(bounds, key=lambda z: bounds[z][0])]
+    return S.ExerciseDetail(
+        exercise=_exercise_out(e),
+        points=points,
+        zones=[
+            S.ZoneBand(zone=z, min_bpm=lo, max_bpm=hi)
+            for z, (lo, hi) in sorted(bounds.items(), key=lambda kv: kv[1][0])
+        ],
+        time_in_zones=[S.ZoneTime(zone=z, minutes=tiz[z]) for z in order if z in tiz],
+        max_hr=max((p.max for p in points), default=None),
+    )
+
+
+def _all_values(session: Session, metric: str) -> dict[date, float]:
+    return daily_values(session, metric, date(1970, 1, 1), date(9999, 1, 1))
+
+
+_BESTS: tuple[tuple[str, str, bool], ...] = (
+    # (metric, label, lowest)
+    ("steps", "Most steps in a day", False),
+    ("distance_km", "Longest distance in a day", False),
+    ("azm", "Most active zone minutes in a day", False),
+    ("calories_active", "Most active calories in a day", False),
+    ("sleep_main_min", "Longest main sleep", False),
+    ("hrv_rmssd", "Highest HRV", False),
+    ("readiness", "Highest readiness", False),
+)
+
+
+def records(session: Session, today: date) -> S.Records:
+    goals = prefs.goals(session)
+    bests: list[S.RecordOut] = []
+    for key, label, lowest in _BESTS:
+        b = derived.best(_all_values(session, key), lowest=lowest)
+        if b:
+            bests.append(
+                S.RecordOut(
+                    key=key, label=label, unit=CATALOG[key].unit, value=b.value, date=b.date
+                )
+            )
+    rhr = derived.best(derived.rolling_mean(_all_values(session, "resting_hr")), lowest=True)
+    if rhr:
+        bests.append(
+            S.RecordOut(
+                key="resting_hr",
+                label="Lowest resting HR",
+                unit="bpm",
+                value=round(rhr.value, 1),
+                date=rhr.date,
+                note="7-day average, so one odd reading can't set it",
+            )
+        )
+    azm = _all_values(session, "azm")
+    weekly = derived.weekly_totals(azm)
+    wb = derived.best(weekly)
+    if wb:
+        bests.append(
+            S.RecordOut(
+                key="azm_week",
+                label="Most active zone minutes in a week",
+                unit="min",
+                value=wb.value,
+                date=wb.date,
+                note="Week starting on this Monday",
+            )
+        )
+    longest_workout = session.scalars(
+        select(Exercise)
+        .where(Exercise.exercise_type != "WALKING")
+        .order_by((func.julianday(Exercise.end_utc) - func.julianday(Exercise.start_utc)).desc())
+        .limit(1)
+    ).first()
+    if longest_workout:
+        out = _exercise_out(longest_workout)
+        bests.append(
+            S.RecordOut(
+                key="longest_workout",
+                label="Longest workout (not walking)",
+                unit="min",
+                value=out.duration_min,
+                date=out.date,
+                note=(out.name or out.exercise_type.replace("_", " ").title()),
+            )
+        )
+
+    def daily_streak(key: str, label: str, metric: str, goal: float) -> S.StreakOut:
+        st = derived.streak({d: v >= goal for d, v in _all_values(session, metric).items()}, today)
+        return S.StreakOut(
+            key=key,
+            label=label,
+            period="day",
+            goal=goal,
+            unit=CATALOG[metric].unit,
+            current=st.current,
+            current_start=st.current_start,
+            longest=st.longest,
+            longest_end=st.longest_end,
+        )
+
+    wk = derived.streak(
+        {w: v >= goals["azm_weekly"] for w, v in weekly.items()},
+        derived.week_start(today),
+        step_days=7,
+    )
+    streaks = [
+        daily_streak("steps", "Step goal", "steps", goals["steps"]),
+        daily_streak("sleep", "Sleep goal", "sleep_main_min", goals["sleep_min"]),
+        S.StreakOut(
+            key="azm",
+            label="Weekly AZM goal",
+            period="week",
+            goal=goals["azm_weekly"],
+            unit="min",
+            current=wk.current,
+            current_start=wk.current_start,
+            longest=wk.longest,
+            longest_end=wk.longest_end,
+        ),
+    ]
+    return S.Records(as_of=today, bests=bests, streaks=streaks)

@@ -14,6 +14,7 @@ DEFAULTS: dict[str, Any] = {
     "units": "metric",
     "theme": "dark",
     "passcode_hash": None,
+    "readiness_weights": {"hrv": 35, "rhr": 25, "sleep": 25, "strain": 15},
 }
 
 
@@ -37,3 +38,9 @@ def goals(session: Session) -> dict[str, int]:
     merged = dict(DEFAULTS["goals"])
     merged.update(get(session, "goals") or {})
     return merged
+
+
+def readiness_weights(session: Session) -> dict[str, float]:
+    merged = dict(DEFAULTS["readiness_weights"])
+    merged.update(get(session, "readiness_weights") or {})
+    return {k: float(v) for k, v in merged.items()}
