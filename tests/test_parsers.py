@@ -243,3 +243,15 @@ def test_sleep_sessions_stages_and_daily_metrics():
     assert d[(day, "waketime_min")] == 360  # 06:00
     assert d[(day, "sleep_deep_min")] == 90
     assert sessions["nap-1"]["deep_min"] is None and not sessions["nap-1"]["is_main"]
+
+
+def test_nan_values_are_treated_as_missing():
+    assert P.num("NaN") is None and P.num(float("inf")) is None
+    page = {"dataPoints": [{"dailySleepTemperatureDerivations": {
+        "date": {"year": 2026, "month": 5, "day": 27},
+        "nightlyTemperatureCelsius": 33.6, "baselineTemperatureCelsius": "NaN"}}]}
+    b = P.parse_daily_list("daily-sleep-temperature-derivations", [page], TZ, AT)
+    assert {m for (_, m) in daily(b)} == {"skin_temp_nightly"}  # no baseline, no delta
+    b2 = P.Batch()
+    b2.daily(date(2026, 1, 1), "x", float("nan"), "u")
+    assert b2.count("daily_metrics") == 0

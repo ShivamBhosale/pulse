@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from collections import defaultdict
 from collections.abc import Iterable
@@ -39,9 +40,12 @@ def parse_duration_s(value: str | None) -> float:
 
 
 def num(value: Any) -> float | None:
+    """Parse a JSON number or int64-as-string. NaN/Infinity (the API sends "NaN" for e.g. a
+    skin-temperature baseline that doesn't exist yet) count as missing."""
     if value is None or value == "":
         return None
-    return float(value)
+    v = float(value)
+    return v if math.isfinite(v) else None
 
 
 def inum(value: Any) -> int | None:
@@ -113,7 +117,7 @@ class Batch:
             self.rows[table].extend(rows)
 
     def daily(self, d: date, metric: str, value: float | None, unit: str) -> None:
-        if value is not None:
+        if value is not None and math.isfinite(value):
             self.add(
                 "daily_metrics", {"civil_date": d, "metric": metric, "value": value, "unit": unit}
             )
