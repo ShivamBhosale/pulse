@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     # Minimum seconds between API requests (rate limits are not published).
     min_request_interval: float = 0.5
 
+    # Built frontend (Docker copies it to /app/static; local dev uses frontend/dist).
+    static_dir: Path = Path("frontend/dist")
+    scheduler_enabled: bool = True
+    sync_interval_min: int = 15
+
     goals: Goals = Field(default_factory=Goals)
 
     @property
@@ -68,6 +73,18 @@ class Settings(BaseSettings):
     @property
     def log_dir(self) -> Path:
         return self.data_dir / "logs"
+
+    @property
+    def db_path(self) -> Path:
+        return self.data_dir / "pulse.db"
+
+    @property
+    def lock_path(self) -> Path:
+        return self.data_dir / "sync.lock"
+
+    @property
+    def secret_key_path(self) -> Path:
+        return self.data_dir / "secret_key"
 
     @property
     def scrub_salt_path(self) -> Path:

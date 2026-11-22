@@ -15,6 +15,9 @@ dependencies = [
     "typer>=0.13",
     "rich>=13.9",
     "tzdata>=2026.6",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14",
+    "apscheduler>=3.10,<4",
 ]
 
 [project.scripts]
@@ -53,7 +56,7 @@ mypy_path = "src"
 packages = ["pulse"]
 
 [[tool.mypy.overrides]]
-module = ["google.*", "google_auth_oauthlib.*"]
+module = ["google.*", "google_auth_oauthlib.*", "apscheduler.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -64,3 +67,4 @@ disallow_untyped_calls = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`:DeprecationWarning"]

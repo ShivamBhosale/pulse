@@ -3,20 +3,24 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from pulse.auth import AuthError, CredentialManager, TokenStore, missing_scopes, run_consent_flow
+from pulse.auth import AuthError, TokenStore, missing_scopes, run_consent_flow
 from pulse.client import AccountNotLinked, HealthApiError, HealthClient
 from pulse.config import Settings, get_settings
 from pulse.datatypes import REGISTRY
+from pulse.db import make_engine, make_session_factory, migrate, session_scope
 from pulse.fileio import ensure_private_dir
 from pulse.logsetup import setup_logging
 from pulse.probe import Coverage, FixtureWriter, Status, run_probe
+from pulse.runtime import make_client
 from pulse.scrub import Scrubber
+from pulse.sync.engine import SyncBusy, SyncEngine, SyncReport
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Pulse health dashboard")
 console = Console()
@@ -35,12 +39,22 @@ def _bootstrap() -> Settings:
 
 
 def _client(s: Settings) -> HealthClient:
-    creds = CredentialManager(TokenStore(s.token_path))
-    return HealthClient(
-        lambda force: creds.access_token(force_refresh=force),
-        base_url=s.api_base,
-        min_interval=s.min_request_interval,
-    )
+    return make_client(s)
+
+
+def _engine(s: Settings) -> SyncEngine:
+    engine = make_engine(s.db_path)
+    migrate(engine)
+    return SyncEngine(make_session_factory(engine), _client(s), s.zone, lock_path=s.lock_path)
+
+
+def _print_report(report: SyncReport) -> None:
+    if not report.auth_ok:
+        console.print(f"[red]Auth failed: {report.auth_error}[/red] Run `pulse auth`.")
+    for r in report.results:
+        mark = "[green]ok[/]" if r.ok else f"[red]failed[/] {r.error}"
+        console.print(f"  {r.stream:<18} {mark} {r.rows if r.ok and r.rows else ''}")
+    console.print(f"{report.requests} API requests")
 
 
 def _mask(value: str) -> str:
@@ -175,12 +189,140 @@ def probe(
 
 
 @app.command()
+def sync(
+    stream: Annotated[
+        list[str] | None, typer.Option("--stream", "-s", help="Only these streams")
+    ] = None,
+) -> None:
+    """Run one incremental sync now (re-fetches the last 3 days)."""
+    s = _bootstrap()
+    try:
+        with console.status("syncing…"):
+            report = _engine(s).run_sync(only=stream)
+    except SyncBusy as exc:
+        console.print(f"[yellow]{exc}[/yellow]")
+        raise typer.Exit(1) from exc
+    _print_report(report)
+    raise typer.Exit(0 if report.ok else 1)
+
+
+@app.command()
+def backfill(
+    since: Annotated[
+        datetime | None,
+        typer.Option(formats=["%Y-%m-%d"], help="Oldest day to fetch (default: discover)"),
+    ] = None,
+    restart: Annotated[bool, typer.Option(help="Ignore saved progress")] = False,
+) -> None:
+    """Fetch history, newest first. Safe to interrupt; re-run to resume."""
+    from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn
+
+    s = _bootstrap()
+    eng = _engine(s)
+    floor = since.date() if since else None
+    if floor is None:
+        with console.status("discovering earliest data…"):
+            floor = eng.discover_earliest()
+        if floor is None:
+            console.print("[yellow]No data found.[/yellow]")
+            return
+        console.print(f"Earliest data: [bold]{floor}[/bold]")
+    plan = eng.backfill_plan(floor, restart)
+    if plan is None or plan[0] >= plan[1]:
+        console.print("[green]Backfill already complete.[/green] Use --restart to redo it.")
+        return
+    total_days = (plan[1] - plan[0]).days
+    console.print(f"Backfilling {plan[0]} → {plan[1]} ({total_days} days)")
+    with Progress(
+        TextColumn("{task.description}"),
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total} days"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("starting", total=total_days)
+
+        def on_progress(stream: str, lo: date, hi: date) -> None:
+            progress.update(
+                task, description=f"{stream:<18} {lo}…{hi}", completed=(plan[1] - hi).days
+            )
+
+        try:
+            report = eng.run_backfill(floor, restart=False, progress=on_progress)
+        except SyncBusy as exc:
+            console.print(f"[yellow]{exc}[/yellow]")
+            raise typer.Exit(1) from exc
+        progress.update(task, completed=total_days)
+    _print_report(report)
+    raise typer.Exit(0 if report.ok else 1)
+
+
+passcode_app = typer.Typer(help="Optional 4-6 digit passcode for the web UI")
+app.add_typer(passcode_app, name="passcode")
+
+
+@passcode_app.command("set")
+def passcode_set() -> None:
+    """Set (or change) the passcode. Logs out every device."""
+    from pulse import prefs, security
+
+    s = _bootstrap()
+    code = typer.prompt("New passcode (4-6 digits)", hide_input=True)
+    if not (code.isdigit() and 4 <= len(code) <= 6):
+        console.print("[red]Passcode must be 4-6 digits.[/red]")
+        raise typer.Exit(1)
+    if typer.prompt("Repeat", hide_input=True) != code:
+        console.print("[red]Passcodes don't match.[/red]")
+        raise typer.Exit(1)
+    engine = make_engine(s.db_path)
+    migrate(engine)
+    with session_scope(make_session_factory(engine)) as db:
+        prefs.put(db, "passcode_hash", security.hash_passcode(code))
+    console.print("[green]Passcode set.[/green]")
+
+
+@passcode_app.command("clear")
+def passcode_clear() -> None:
+    """Remove the passcode (UI open to anyone who can reach the server)."""
+    from pulse import prefs
+
+    s = _bootstrap()
+    engine = make_engine(s.db_path)
+    migrate(engine)
+    with session_scope(make_session_factory(engine)) as db:
+        prefs.put(db, "passcode_hash", None)
+    console.print("Passcode cleared.")
+
+
+@app.command()
+def openapi(
+    out: Annotated[Path, typer.Option(help="Where to write the spec")] = Path("openapi.json"),
+) -> None:
+    """Write the OpenAPI spec (used to generate frontend and Android clients)."""
+    import json
+
+    from pulse.api.app import create_app
+    from pulse.db import make_engine as _mk
+
+    spec = create_app(get_settings(), engine=_mk(None), start_scheduler=False).openapi()
+    out.write_text(json.dumps(spec, indent=2) + "\n")
+    console.print(f"Wrote {out}")
+
+
+@app.command()
 def serve() -> None:
-    """Run the web server."""
+    """Run the web server (API + PWA + scheduler)."""
     import uvicorn
 
     s = _bootstrap()
-    uvicorn.run("pulse.api.app:app", host=s.serve_host, port=s.serve_port, proxy_headers=False)
+    uvicorn.run(
+        "pulse.api.app:create_app",
+        factory=True,
+        host=s.serve_host,
+        port=s.serve_port,
+        proxy_headers=False,
+        log_config=None,
+    )
 
 
 if __name__ == "__main__":
