@@ -65,7 +65,7 @@ export function heartRateOption(hr: IntradayHeartRate, p: Palette): EChartsCoreO
       label: {
         show: true,
         position: "insideTop",
-        formatter: pd.kind === "sleep" ? "Sleep" : pd.label,
+        formatter: pd.label,
         color: p.ink2,
         fontSize: 10,
         distance: 4,
@@ -123,7 +123,7 @@ export function heartRateOption(hr: IntradayHeartRate, p: Palette): EChartsCoreO
                 silent: true,
                 symbol: "none",
                 lineStyle: { color: p.muted, type: "dashed", width: 1 },
-                label: { formatter: `Resting ${fmtNum(hr.resting_hr)}`, color: p.muted, fontSize: 10, position: "insideStartTop" },
+                label: { formatter: `Resting ${fmtNum(hr.resting_hr)}`, color: p.muted, fontSize: 10, position: "insideEndTop" },
                 data: [{ yAxis: hr.resting_hr }],
               }
             : undefined,
@@ -189,7 +189,7 @@ export function stepsCurveOption(curve: StepsCurve, goal: number, p: Palette): E
           silent: true,
           symbol: "none",
           lineStyle: { color: p.axis, width: 1 },
-          label: { formatter: `Goal ${fmtNum(goal)}`, color: p.muted, fontSize: 10, position: "insideEndTop" },
+          label: { formatter: `Goal ${fmtNum(goal)}`, color: p.muted, fontSize: 10, position: "insideStartTop" },
           data: [{ yAxis: goal }],
         },
       },
@@ -296,13 +296,14 @@ const dayLabels = (nights: SleepTrendNight[]) => nights.map((n) => fmtDay(n.date
 export function durationOption(nights: SleepTrendNight[], goalMin: number, p: Palette): EChartsCoreOption {
   return {
     ...base(p),
-    grid: { left: 40, right: 56, top: 14, bottom: 26 },
+    grid: { left: 40, right: 12, top: 14, bottom: 26 },
     xAxis: { type: "category", data: dayLabels(nights), ...axisCommon(p), splitLine: { show: false } },
     yAxis: {
       type: "value",
       ...axisCommon(p),
       axisLine: { show: false },
-      splitNumber: 4,
+      min: 0,
+      interval: 120,
       axisLabel: { ...axisCommon(p).axisLabel, formatter: (v: number) => `${Math.round(v / 60)}h` },
     },
     tooltip: {
@@ -330,7 +331,7 @@ export function durationOption(nights: SleepTrendNight[], goalMin: number, p: Pa
           silent: true,
           symbol: "none",
           lineStyle: { color: p.ink2, type: "dashed", width: 1 },
-          label: { formatter: `Goal ${fmtDuration(goalMin)}`, color: p.muted, fontSize: 10, position: "end" },
+          label: { formatter: `Goal ${fmtDuration(goalMin)}`, color: p.muted, fontSize: 10, position: "insideEndTop" },
           data: [{ yAxis: goalMin }],
         },
       },
@@ -361,7 +362,8 @@ export function stagesStackOption(nights: SleepTrendNight[], p: Palette): EChart
       type: "value",
       ...axisCommon(p),
       axisLine: { show: false },
-      splitNumber: 4,
+      min: 0,
+      interval: 120,
       axisLabel: { ...axisCommon(p).axisLabel, formatter: (v: number) => `${Math.round(v / 60)}h` },
     },
     tooltip: {
@@ -392,8 +394,9 @@ export function consistencyOption(nights: SleepTrendNight[], p: Palette): EChart
   const data = nights
     .map((n, i) => (n.bedtime_min != null && n.waketime_min != null ? [i, n.bedtime_min, n.waketime_min] : null))
     .filter((x): x is number[] => x != null);
-  const lo = Math.floor(Math.min(...data.map((d) => d[1] ?? 0), -120) / 60) * 60 - 60;
-  const hi = Math.ceil(Math.max(...data.map((d) => d[2] ?? 0), 420) / 60) * 60 + 60;
+  // Align to 2-hour ticks so labels are evenly spaced.
+  const lo = Math.floor((Math.min(...data.map((d) => d[1] ?? 0), -120) - 30) / 120) * 120;
+  const hi = Math.ceil((Math.max(...data.map((d) => d[2] ?? 0), 420) + 30) / 120) * 120;
   return {
     ...base(p),
     grid: { left: 44, right: 12, top: 10, bottom: 26 },

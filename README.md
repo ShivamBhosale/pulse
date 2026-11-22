@@ -26,6 +26,8 @@ no AI calls, and your health data stays on the server.
 `restart: unless-stopped` brings the container back after a reboot, provided the Docker daemon
 is enabled (`systemctl enable docker`).
 
+**While the server is running, run CLI commands inside its container** with `docker compose exec pulse pulse <command>`, for example `docker compose exec pulse pulse sync` or `docker compose exec pulse pulse backfill -s steps_15m --since 2025-01-01`. This keeps every SQLite writer in one container. During development on macOS (Colima's file share), a backfill running in a second `docker compose run` container lost its last few commits while the server was up. The bind mount on a Linux server is native, but `exec` is the safe habit either way. `pulse auth` and the first backfill can use `docker compose run` before `up -d`.
+
 ## Commands
 
 | Command | What it does |
@@ -65,7 +67,7 @@ Google Health API v4 ──(httpx, throttled, backoff)──► sync streams ─
 - **Revisions and deletions.** A stream owns specific rows per civil date. Each fetch deletes those rows inside the window, then upserts the new ones, all in one transaction. Device revisions and upstream deletions therefore show up. Re-running a sync is idempotent.
 - **Days follow the API's civil dates** in `PULSE_TZ` (America/Toronto). Instants are stored in UTC, and DST is handled.
 - **`sync_state`** records per stream: high-water mark, last success, last error, and the backfill cursor. Token-refresh failures land in the `_auth` row. `/api/v1/status` reports them, and the UI shows a reconnect banner.
-- **Errors.** 429 and 5xx responses are retried with jittered exponential backoff that respects `Retry-After`. Logs are JSON lines in `data/logs/pulse.log`, with tokens redacted.
+- **Errors.** 429 and 5xx responses are retried with jittered exponential backoff that respects `Retry-After`. Logs are JSON lines in `data/logs/pulse.log` (`jq . data/logs/pulse.log`), with tokens redacted.
 
 ### Code map
 ```

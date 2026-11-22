@@ -224,7 +224,7 @@ def readiness_placeholder(d: date) -> S.Tile:
         better="up",
         baseline=None,
         spark=spark({}, d),
-        note="Personal heuristic — arrives in phase 2",
+        note="Arrives in phase 2",
     )
 
 

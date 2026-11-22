@@ -238,6 +238,7 @@ def test_sleep_sessions_stages_and_daily_metrics():
     d = daily(b)
     day = date(2026, 11, 21)
     assert d[(day, "sleep_min")] == 455  # main 420 + nap 35
+    assert d[(day, "sleep_main_min")] == 420
     assert d[(day, "sleep_in_bed_min")] == 430
     assert d[(day, "bedtime_min")] == -70  # 22:50 the evening before
     assert d[(day, "waketime_min")] == 360  # 06:00

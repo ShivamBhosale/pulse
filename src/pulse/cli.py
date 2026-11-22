@@ -213,12 +213,36 @@ def backfill(
         typer.Option(formats=["%Y-%m-%d"], help="Oldest day to fetch (default: discover)"),
     ] = None,
     restart: Annotated[bool, typer.Option(help="Ignore saved progress")] = False,
+    stream: Annotated[
+        list[str] | None,
+        typer.Option("--stream", "-s", help="Refill only these streams (needs --since)"),
+    ] = None,
 ) -> None:
     """Fetch history, newest first. Safe to interrupt; re-run to resume."""
     from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn
 
     s = _bootstrap()
     eng = _engine(s)
+    if stream:
+        from pulse.sync.streams import STREAMS_BY_NAME
+
+        unknown = [x for x in stream if x not in STREAMS_BY_NAME]
+        if unknown or since is None:
+            problem = (
+                f"Unknown stream(s): {', '.join(unknown)}"
+                if unknown
+                else "--since is required with --stream"
+            )
+            console.print(f"[red]{problem}. Streams: {', '.join(STREAMS_BY_NAME)}[/red]")
+            raise typer.Exit(1)
+        with console.status("refilling…") as st:
+            report = eng.refill(
+                stream,
+                since.date(),
+                progress=lambda name, lo, hi: st.update(f"refilling {name} {lo}…{hi}"),
+            )
+        _print_report(report)
+        raise typer.Exit(0 if report.ok else 1)
     floor = since.date() if since else None
     if floor is None:
         with console.status("discovering earliest data…"):

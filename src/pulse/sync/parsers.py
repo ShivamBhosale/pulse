@@ -520,6 +520,7 @@ def parse_sleep(pages: Iterable[JSON], zone: ZoneInfo, fetched_at: datetime) -> 
     for d, ss in by_date.items():
         main = next((s for s in ss if s["is_main"]), max(ss, key=lambda s: s["minutes_asleep"]))
         b.daily(d, "sleep_min", float(sum(s["minutes_asleep"] for s in ss)), "min")
+        b.daily(d, "sleep_main_min", float(main["minutes_asleep"]), "min")
         b.daily(
             d, "sleep_in_bed_min", (main["end_utc"] - main["start_utc"]).total_seconds() / 60, "min"
         )

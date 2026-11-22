@@ -176,3 +176,13 @@ def test_lock_prevents_overlap(db, api, tmp_path):
     with sync_lock(lock), pytest.raises(SyncBusy):
         engine_for(db, api, lock_path=lock).run_sync()
     assert engine_for(db, api, lock_path=lock).run_sync().ok
+
+
+def test_refill_selected_stream_without_moving_cursor(db, api):
+    eng = engine_for(db, api)
+    report = eng.refill(["daily_rollups_90"], TODAY - timedelta(days=5))
+    assert report.ok and [r.stream for r in report.results] == ["daily_rollups_90"]
+    assert metric(db, "steps", TODAY - timedelta(days=5)) == 6000
+    assert metric(db, "resting_hr", TODAY) is None  # other streams untouched
+    with db() as s:
+        assert s.get(SyncState, BACKFILL_ROW) is None

@@ -9,7 +9,8 @@ export function Sparkline({ points, band }: { points: Point[]; band?: { q1: numb
   const h = 32;
   const vals = points.map((p) => p.value ?? null);
   const nums = vals.filter((v): v is number => v != null);
-  if (nums.length < 2) return <svg width={w} height={h} aria-hidden />;
+  const cls = "h-8 w-[84px] shrink-0 overflow-visible sm:w-[120px]";
+  if (nums.length < 2) return <svg className={cls} aria-hidden />;
   let lo = Math.min(...nums, band?.q1 ?? Infinity);
   let hi = Math.max(...nums, band?.q3 ?? -Infinity);
   if (hi === lo) {
@@ -31,7 +32,7 @@ export function Sparkline({ points, band }: { points: Point[]; band?: { q1: numb
   const lastIdx = vals.findLastIndex((v) => v != null);
   const last = vals[lastIdx];
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="overflow-visible">
+    <svg viewBox={`0 0 ${w} ${h}`} aria-hidden className={cls}>
       {band && (
         <rect x={0} width={w} y={y(band.q3)} height={Math.max(1, y(band.q1) - y(band.q3))} fill="var(--accent-soft)" rx={2} />
       )}

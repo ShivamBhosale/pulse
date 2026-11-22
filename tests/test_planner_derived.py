@@ -81,3 +81,19 @@ def test_delta_and_curves():
     assert derived.median_curve([]) == []
     assert derived.stdev([60, 0, None]) == 30
     assert derived.stdev([5]) is None
+
+
+def test_physical_rollup_chunks_stay_under_api_limits_across_dst():
+    from zoneinfo import ZoneInfo
+
+    from pulse.datatypes import CivilWindow
+    from pulse.sync.streams import STREAMS_BY_NAME
+
+    tz = ZoneInfo("America/Toronto")
+    limits = {"hr_minute": 14, "steps_15m": 90}  # days, per the API (physical time)
+    for name, limit in limits.items():
+        stream = STREAMS_BY_NAME[name]
+        # A chunk that ends just after the fall-back change gains an hour.
+        for lo, hi in chunks(date(2026, 8, 1), date(2026, 11, 30), stream.chunk_days):
+            s, e = CivilWindow(lo, hi, tz).utc_bounds()
+            assert (e - s) < timedelta(days=limit), (name, lo, hi)

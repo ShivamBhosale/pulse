@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from logging.handlers import RotatingFileHandler
@@ -29,6 +30,25 @@ def redact(text: str, extra_secrets: tuple[str, ...] = ()) -> str:
     return text
 
 
+class JsonFormatter(logging.Formatter):
+    """One JSON object per line: easy to grep, jq or ship later."""
+
+    def __init__(self, extra_secrets: tuple[str, ...] = ()) -> None:
+        super().__init__()
+        self.extra_secrets = extra_secrets
+
+    def format(self, record: logging.LogRecord) -> str:
+        entry: dict[str, object] = {
+            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S%z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+        }
+        if record.exc_info:
+            entry["exc"] = redact(self.formatException(record.exc_info), self.extra_secrets)
+        return json.dumps(entry, ensure_ascii=False)
+
+
 class RedactingFilter(logging.Filter):
     def __init__(self, extra_secrets: tuple[str, ...] = ()) -> None:
         super().__init__()
@@ -49,9 +69,7 @@ def setup_logging(
     for h in list(root.handlers):
         root.removeHandler(h)
     handler = RotatingFileHandler(log_dir / "pulse.log", maxBytes=5_000_000, backupCount=5)
-    handler.setFormatter(
-        logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s", "%Y-%m-%dT%H:%M:%S%z")
-    )
+    handler.setFormatter(JsonFormatter(extra_secrets))
     handler.addFilter(RedactingFilter(extra_secrets))
     root.addHandler(handler)
     # Third-party libraries can log full URLs/headers at DEBUG; keep them quiet.

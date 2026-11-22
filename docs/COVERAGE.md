@@ -37,6 +37,14 @@ This file records only which data types and methods work. It contains no health 
 
 ## Rules learned
 
+- Quotas (Cloud Console, 2026-11-22):
+  - 300 requests per minute per user. Pulse throttles to at most 120 per minute.
+  - 120,000 requests per minute per project.
+  - 86.4 million requests per day. A full backfill used about 800 requests; the 15-minute sync uses about 2,100 a day.
+
+- `rollUp` range limits (14 or 90 days) apply to **physical** time. A run of 90 civil days that crosses the fall-back DST change lasts 90 days plus 1 hour, and the API rejects it with a bare `400 INVALID_ARGUMENT`. Pulse chunks 15-minute steps in 60-day pieces.
+- For older data, `rollUp` of 15-minute steps sometimes spreads a day's steps across fewer windows. The per-day totals are always exact and match `dailyRollUp`. Repeating the request can return the finer spread. The median-day curve tolerates this, and totals always come from `dailyRollUp`.
+
 - Filters use snake_case data type names, exactly as documented. The camelCase fallback was never needed.
 - When a method isn't supported, the API returns a 400 that lists the supported actions. The sync layer should choose a method per type from this table instead of probing.
 - The account time zone is `America/Toronto`. Units are kilometres and kilograms.

@@ -92,7 +92,7 @@ def test_today(client):
     body = client.get("/api/v1/today").json()
     assert body["date"] == "2026-11-21"
     tiles = {t["key"]: t for t in body["tiles"]}
-    assert list(tiles) == ["readiness", "sleep_min", "resting_hr", "hrv_rmssd", "steps", "azm"]
+    assert list(tiles) == ["readiness", "sleep_main_min", "resting_hr", "hrv_rmssd", "steps", "azm"]
     rhr = tiles["resting_hr"]
     assert rhr["value"] == 60 and rhr["baseline"]["n"] == 28
     assert rhr["status"] in {"in_range", "mild", "notable"}

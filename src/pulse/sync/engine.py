@@ -219,6 +219,40 @@ class SyncEngine:
             s.commit()
         return (floor, cursor) if cursor > floor else (floor, floor)
 
+    def refill(
+        self,
+        streams: list[str],
+        since: date,
+        until: date | None = None,
+        *,
+        progress: ProgressFn | None = None,
+    ) -> SyncReport:
+        """Re-fetch [since, until) for selected streams only. Doesn't touch the backfill
+        cursor; use it to repair a range one stream failed on."""
+        report = SyncReport(started_at=self.now())
+        start_requests = self.client.request_count
+        end = until or self.today() + timedelta(days=1)
+        selected = [st for st in self.streams if st.name in streams]
+        with sync_lock(self.lock_path):
+            for stream in selected:
+                rows, err = 0, None
+                for lo, hi in chunks(since, end, stream.chunk_days, newest_first=True):
+                    if progress:
+                        progress(stream.name, lo, hi)
+                    try:
+                        rows += self._fetch_write(stream, lo, hi)
+                    except (AuthError, Unauthorized) as exc:
+                        report.auth_ok, report.auth_error = False, str(exc)
+                        self._record_auth(False, str(exc))
+                        report.finished_at = self.now()
+                        return report
+                    except HealthApiError as exc:
+                        err = f"{exc.status} {exc.code}: {exc.message}"[:500]
+                report.results.append(StreamResult(stream.name, err is None, rows, err))
+        report.finished_at = self.now()
+        report.requests = self.client.request_count - start_requests
+        return report
+
     def run_backfill(
         self,
         since: date | None = None,
@@ -235,6 +269,7 @@ class SyncEngine:
                 report.finished_at = self.now()
                 return report
             floor, cursor = plan
+            log.info("backfill start [%s, %s)", floor, cursor)
             failures: dict[str, str] = {}
             for lo, hi in chunks(floor, cursor, BACKFILL_CHUNK_DAYS, newest_first=True):
                 for stream in self.streams:
@@ -256,6 +291,7 @@ class SyncEngine:
                 with self.sessions() as s:
                     self._state(s, BACKFILL_ROW).backfill_cursor = lo
                     s.commit()
+                log.info("backfill chunk done [%s, %s); cursor=%s", lo, hi, lo)
             for stream in self.streams:
                 err = failures.get(stream.name)
                 report.results.append(StreamResult(stream.name, err is None, error=err))
@@ -264,6 +300,7 @@ class SyncEngine:
                 st.last_success = self.now()
                 st.last_error = "; ".join(f"{k}: {v}" for k, v in failures.items()) or None
                 s.commit()
+            log.info("backfill finished; failures=%s", sorted(failures) or "none")
         report.finished_at = self.now()
         report.requests = self.client.request_count - start_requests
         return report

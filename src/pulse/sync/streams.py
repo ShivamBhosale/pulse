@@ -249,7 +249,9 @@ STREAMS: tuple[Stream, ...] = (
     ),
     Stream(
         "steps_15m",
-        90,
+        # rollUp limits are physical time (90 days); 90 civil days spanning a DST change are
+        # 90 days +1h and get rejected, so stay well under.
+        60,
         _rollup("steps", 900, P.parse_steps_rollup),
         (Clear("intraday_steps"),),
         "15-minute steps",

@@ -90,7 +90,12 @@ def get_today(request: Request, db: DB) -> S.Today:
     tiles = [
         queries.readiness_placeholder(d),
         queries.daily_tile(
-            db, "sleep_min", d, fallback_days=0, label="Last night's sleep", goal=goals["sleep_min"]
+            db,
+            "sleep_main_min",
+            d,
+            fallback_days=1,
+            label="Last night's sleep",
+            goal=goals["sleep_min"],
         ),
         queries.daily_tile(db, "resting_hr", d, fallback_days=2),
         queries.daily_tile(db, "hrv_rmssd", d, fallback_days=2, label="HRV"),

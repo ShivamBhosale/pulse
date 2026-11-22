@@ -152,7 +152,7 @@ export function SleepPage() {
         <ErrorNote error={trend.error} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card index={5} title="Time asleep vs goal" subtitle={trend.data?.avg_asleep_min != null ? <span className="num">avg {fmtDuration(trend.data.avg_asleep_min)}</span> : undefined}>
+          <Card index={5} title="Time asleep vs goal (incl. naps)" subtitle={trend.data?.avg_asleep_min != null ? <span className="num">avg {fmtDuration(trend.data.avg_asleep_min)}</span> : undefined}>
             {dur ? <EChart option={dur} height={220} label="Time asleep per night compared with goal" /> : <Empty>No nights in range</Empty>}
           </Card>
           <Card index={6} title="Stages per night">

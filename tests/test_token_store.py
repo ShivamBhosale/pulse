@@ -102,3 +102,24 @@ def test_redacting_filter_handles_args_and_extra_secrets():
     )
     RedactingFilter(("mysecret",)).filter(rec)
     assert "ya29.zzz" not in rec.getMessage() and "mysecret" not in rec.getMessage()
+
+
+def test_json_log_lines_are_redacted(tmp_path):
+    import json as _json
+
+    from pulse.logsetup import setup_logging
+
+    setup_logging(tmp_path, extra_secrets=("topsecret",))
+    log = logging.getLogger("pulse.test")
+    log.info("token ya29.abc and %s", "topsecret")
+    try:
+        raise RuntimeError("Bearer ya29.leak")
+    except RuntimeError:
+        log.exception("boom")
+    for h in logging.getLogger().handlers:
+        h.flush()
+    lines = [_json.loads(x) for x in (tmp_path / "pulse.log").read_text().splitlines()]
+    text = (tmp_path / "pulse.log").read_text()
+    assert lines[0]["level"] == "INFO" and lines[0]["logger"] == "pulse.test"
+    assert "ya29" not in text and "topsecret" not in text
+    assert "exc" in lines[1]
