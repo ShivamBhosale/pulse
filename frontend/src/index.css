@@ -1,0 +1,179 @@
+@import "tailwindcss";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+
+/* ---- tokens --------------------------------------------------------------------------
+   One accent (violet), status colours reserved for meaning, stage palette validated with
+   the dataviz validator (deep/light/REM/awake, both modes). */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0e1014;
+  --surface: #14171c;
+  --surface-2: #1a1e25;
+  --line: #242932;
+  --grid: #20242b;
+  --axis: #3a404a;
+  --ink: #eceae4;
+  --ink-2: #b9b6ad;
+  --ink-muted: #858b95;
+  --accent: #9d8cff;
+  --accent-ink: #b8abff;
+  --accent-soft: rgb(157 140 255 / 0.14);
+  --good: #0ca30c;
+  --good-ink: #3fcf5a;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --stage-deep: #3987e5;
+  --stage-light: #c98500;
+  --stage-rem: #199e70;
+  --stage-awake: #d95926;
+  --band-sleep: rgb(150 160 180 / 0.1);
+  --band-workout: rgb(157 140 255 / 0.12);
+  --zone-1: rgb(157 140 255 / 0.05);
+  --zone-2: rgb(157 140 255 / 0.09);
+  --zone-3: rgb(157 140 255 / 0.14);
+  --glow: rgb(157 140 255 / 0.1);
+  --noise-opacity: 0.05;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --page: #f4f3ef;
+  --surface: #fbfbf9;
+  --surface-2: #f0efea;
+  --line: #e1e0d9;
+  --grid: #e8e7e1;
+  --axis: #c3c2b7;
+  --ink: #15161a;
+  --ink-2: #4a4a47;
+  --ink-muted: #7a7973;
+  --accent: #5b47d6;
+  --accent-ink: #4a37c4;
+  --accent-soft: rgb(91 71 214 / 0.1);
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --stage-deep: #2a78d6;
+  --stage-light: #eda100;
+  --stage-rem: #1baf7a;
+  --stage-awake: #eb6834;
+  --band-sleep: rgb(90 100 120 / 0.09);
+  --band-workout: rgb(91 71 214 / 0.09);
+  --zone-1: rgb(91 71 214 / 0.04);
+  --zone-2: rgb(91 71 214 / 0.07);
+  --zone-3: rgb(91 71 214 / 0.11);
+  --glow: rgb(91 71 214 / 0.07);
+  --noise-opacity: 0.035;
+}
+
+@theme inline {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-good-ink: var(--good-ink);
+  --color-warning: var(--warning);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+}
+
+/* ---- base ----------------------------------------------------------------------------- */
+html {
+  background: var(--page);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100dvh;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.45;
+  background:
+    radial-gradient(1200px 520px at 85% -10%, var(--glow), transparent 60%),
+    radial-gradient(900px 480px at -10% 110%, var(--glow), transparent 55%),
+    var(--page);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+/* Film-grain noise: depth without decoration. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--noise-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+#root {
+  position: relative;
+  z-index: 1;
+}
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- motion: staggered reveal --------------------------------------------------------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.reveal {
+  animation: rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+.syncing-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .syncing-dot {
+    animation: none;
+  }
+}

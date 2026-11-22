@@ -18,5 +18,6 @@ build/
 # Frontend (phase 1+)
 node_modules/
 frontend/dist/
+frontend/dev-dist/
 
 .DS_Store

@@ -4,10 +4,8 @@ Pulse is a self-hosted, single-user dashboard for your Fitbit data, read from th
 **Google Health API v4**. It runs on your own server at no cost. It uses no cloud hosting and
 no AI calls, and your health data stays on the server.
 
-> **Status: Phase 0, access and probe.**
->
-> - Working: OAuth (`pulse auth`), a coverage probe (`pulse probe`), and a liveness endpoint.
-> - Not yet built: the sync pipeline, database and UI. They arrive in Phases 1–2.
+> **Status: Phase 1 — sync pipeline, API, Today and Sleep pages (installable PWA).**
+> Phase 2 (full dashboard, readiness, records) is next.
 
 ## Quick start
 
@@ -20,9 +18,9 @@ no AI calls, and your health data stays on the server.
    mkdir -p data fixtures && chmod 700 data fixtures
    docker compose build
    docker compose run --rm -p 127.0.0.1:8765:8765 pulse auth   # with ssh -L 8765 tunnel
-   docker compose run --rm pulse probe
-   docker compose up -d                                         # web server on :8000
-   curl http://localhost:8000/api/v1/health
+   docker compose run --rm pulse probe                          # optional: coverage report
+   docker compose run --rm pulse backfill                       # all history, resumable
+   docker compose up -d                                         # UI + API + 15-min sync on :8000
    ```
 
 `restart: unless-stopped` brings the container back after a reboot, provided the Docker daemon
@@ -34,35 +32,67 @@ is enabled (`systemctl enable docker`).
 |---|---|
 | `pulse auth [--port 8765]` | Runs the installed-app OAuth flow: loopback redirect, PKCE S256, five read-only scopes. Writes `data/token.json` (0600). |
 | `pulse probe [--days 7] [-t TYPE ...] [--max-pages 3] [--no-save]` | Calls identity, profile and settings, then fetches the last N days of each data type. Prints a coverage table and writes fixtures. |
-| `pulse serve` | Starts the FastAPI server. OpenAPI is at `/api/v1/openapi.json`. |
+| `pulse backfill [--since YYYY-MM-DD] [--restart]` | Fetches history newest-first in 90-day chunks. It finds the earliest data itself, shows progress, and resumes where it stopped if interrupted. |
+| `pulse sync [-s STREAM]` | Runs one incremental sync now. Each run re-fetches the last 3 days, because the device revises recent data. |
+| `pulse passcode set` / `clear` | Sets or removes the optional 4–6 digit passcode for the web UI. Setting it logs out every device. |
+| `pulse openapi [--out FILE]` | Writes the OpenAPI spec. The frontend types are generated from it, and so will the future Android client be. |
+| `pulse serve` | Starts the API, the PWA and the 15-minute scheduler. OpenAPI is at `/api/v1/openapi.json`, docs at `/api/v1/docs`. |
 
 To run these locally without Docker: `uv sync`, then `uv run pulse …`.
 
-## Architecture (Phase 0)
+## Architecture
 
+```
+Google Health API v4 ──(httpx, throttled, backoff)──► sync streams ──► SQLite (WAL) ──► FastAPI /api/v1 ──► React PWA
+                         every 15 min (APScheduler)    replace-in-window       │                 (served by FastAPI)
+                         + pulse backfill/sync          upserts                 └─ queries.py aggregates in SQL
+```
+
+### Sync design
+- **Totals come from rollups.** Steps, distance and calories arrive from three sources: the band, the phone and Health Connect. Summing listed points would double-count, so `dailyRollUp` and `rollUp` give merged totals (see `docs/COVERAGE.md`).
+- **Streams** are defined in `src/pulse/sync/streams.py`:
+
+  | Stream | What it fetches | Chunk size |
+  |---|---|---|
+  | `daily_rollups_90` | daily totals | 90 days |
+  | `daily_rollups_14` | HR, total kcal, kcal per zone, active minutes | 14 days |
+  | `daily_lists` | resting HR, HRV, SpO2, skin temperature, zone bounds | 90 days |
+  | `hr_minute` | 1-minute heart-rate rollup | 7 days |
+  | `steps_15m` | 15-minute step rollup | 90 days |
+  | `intraday_lists` | AZM, SpO2/HRV samples, sedentary periods, exercises | 30 days |
+  | `sleep` | sleep sessions, via reconcile | 30 days |
+
+- **Revisions and deletions.** A stream owns specific rows per civil date. Each fetch deletes those rows inside the window, then upserts the new ones, all in one transaction. Device revisions and upstream deletions therefore show up. Re-running a sync is idempotent.
+- **Days follow the API's civil dates** in `PULSE_TZ` (America/Toronto). Instants are stored in UTC, and DST is handled.
+- **`sync_state`** records per stream: high-water mark, last success, last error, and the backfill cursor. Token-refresh failures land in the `_auth` row. `/api/v1/status` reports them, and the UI shows a reconnect banner.
+- **Errors.** 429 and 5xx responses are retried with jittered exponential backoff that respects `Retry-After`. Logs are JSON lines in `data/logs/pulse.log`, with tokens redacted.
+
+### Code map
 ```
 src/pulse/
-  config.py     settings from env/.env (PULSE_*), scopes, goals, timezone
-  auth.py       consent flow, TokenStore (atomic 0600 writes), CredentialManager (auto-refresh)
-  client.py     httpx client: throttle, retries with jittered backoff + Retry-After,
-                401 → refresh once, typed errors (AccountNotLinked, InvalidArgument, …), pagination
-  datatypes.py  registry of the 24 data types (kind, value field, page size), AIP-160 filter builder,
-                DST-safe civil-day windows
-  probe.py      tries candidate filters per type, summarises coverage, writes fixtures
-  scrub.py      HMAC-based deterministic ID scrubbing for fixtures
-  logsetup.py   rotating log file with token/secret redaction
-  api/app.py    FastAPI app (/api/v1/health)
+  sync/{planner,parsers,streams,writer,engine}.py   pipeline (pure parsers + planner, unit-tested)
+  models.py, db.py, migrations/                     schema (SQLAlchemy 2 + Alembic, auto-migrates at start)
+  queries.py, derived.py, metrics.py                read side: baselines (28-day median/IQR), catalog
+  api/{app,routes,schemas}.py                       FastAPI, passcode gate, SPA serving, OpenAPI
+  scheduler.py, security.py, prefs.py, cli.py
+frontend/                                           Vite + React + TS, TanStack Query, Tailwind, ECharts, PWA
 ```
 
-API facts this code relies on come from the v4 docs, read 2026-11-21:
+### Data model
+| Table | Contents |
+|---|---|
+| `raw_points` | Every listed or reconciled point, exactly as returned. Unique on `(data_type, point_key)`. |
+| `daily_metrics` | Long format: `(civil_date, metric, value, unit)`. |
+| `intraday_hr` | Heart rate per minute: avg, min, max. |
+| `intraday_steps` | Steps per 15 minutes. |
+| `intraday_samples` | SpO2 and HRV samples taken during sleep. |
+| `hr_zone_bounds` | Heart-rate zone boundaries per day. |
+| `sleep_sessions`, `sleep_stages` | Sleep sessions and their stages. |
+| `exercises` | Workouts. Band and Health Connect duplicates are merged. |
+| `sync_state` | Per-stream sync bookkeeping. |
+| `settings` | Goals, units and the passcode hash. |
 
-- **Base and methods.** The base URL is `https://health.googleapis.com/v4`.
-  - `GET users/me/{identity,profile,settings}`
-  - `GET users/me/dataTypes/{type}/dataPoints` (list)
-  - `GET users/me/dataTypes/{type}/dataPoints:reconcile` (used for sleep)
-  - `POST users/me/dataTypes/{type}/dataPoints:dailyRollUp`
-- **Filters.** Data type names are snake_case inside a filter and kebab-case in the URL.
-- **Page sizes.** Sleep and exercise pages cap at 25 points; other types cap at 10000.
+These tables are enough to build a future template-based daily summary without schema changes.
 
 ## Where things live
 
@@ -75,15 +105,12 @@ API facts this code relies on come from the v4 docs, read 2026-11-21:
 | `fixtures/raw/` | unscrubbed API responses from `probe` | 0600 | **No** |
 | `fixtures/scrubbed/` | ID-scrubbed responses; health values remain | 0600 | **No** (opt in if your remote is private) |
 | `tests/fixtures/` | small synthetic responses in the documented shapes | — | Yes |
-
-The SQLite database will be `data/pulse.db` from Phase 1 onward.
+| `data/pulse.db` (+ `-wal`, `-shm`) | all synced health data | — | **No** |
+| `data/secret_key` | HMAC key for passcode session cookies | 0600 | **No** |
 
 ## Backups
 
-All state is in `data/`. Phase 0 has only the token and salt; a fresh `pulse auth` recreates
-the token anyway.
-
-From Phase 1, back up with SQLite's online backup, which is safe while the server runs:
+All state is in `data/`. Back up with SQLite's online backup, which is safe while the server runs:
 
 ```bash
 sqlite3 data/pulse.db ".backup 'backups/pulse-$(date +%F).db'"
@@ -98,6 +125,7 @@ Copy `backups/` and `.env` somewhere private. The token can always be re-issued 
 sudo useradd --system --home /opt/pulse --shell /usr/sbin/nologin pulse
 sudo git clone <repo> /opt/pulse && cd /opt/pulse
 sudo -u pulse uv sync --no-dev --frozen     # needs uv; installs Python 3.12 into .venv
+(cd frontend && npm ci && npm run build)    # needs Node 22+; PULSE_STATIC_DIR=/opt/pulse/frontend/dist
 sudo cp .env.example .env && sudo chmod 600 .env && sudo chown pulse: .env   # edit it
 sudo -u pulse mkdir -p data fixtures
 sudo -u pulse .venv/bin/pulse auth          # with ssh -L 8765 tunnel
@@ -112,12 +140,20 @@ uv sync
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
+cd frontend && npm ci && npm run typecheck && npm run lint && npm run build
+npm run dev                      # Vite on :5173, proxies /api to `uv run pulse serve` on :8000
+uv run pulse openapi --out frontend/openapi.json && npm run gen:api   # after API changes
 ```
+
+## Installing the PWA
+On your Pixel, open `http://<server-tailscale-name>:8000` in Chrome, then choose **⋮ → Add to Home screen → Install**.
+
+Chrome only allows installing a service worker on a secure origin: HTTPS or localhost. Over plain-HTTP Tailscale, run `tailscale serve --bg 8000` on the server and open the `https://<server>.<tailnet>.ts.net` URL. Tailscale provisions the certificate, and the page stays private to your tailnet.
 
 Tests never call the live API. They use `httpx.MockTransport` and the JSON in `tests/fixtures/`.
 
 ## Network exposure
 
-The server binds to `PULSE_BIND`, which defaults to `0.0.0.0`. To serve only on your tailnet,
-set it to the server's Tailscale IP in `.env`. Phase 0 serves no health data; the optional
-passcode screen arrives in Phase 1.
+The server binds to `PULSE_BIND`, which defaults to `0.0.0.0`. To serve only on your tailnet, set it to the server's Tailscale IP in `.env`, or to `127.0.0.1` when you use `tailscale serve`.
+
+Pulse has no user accounts. You can add `pulse passcode set` for a lock screen. The passcode is stored as an scrypt hash, sessions use an HMAC-signed HttpOnly cookie, and failed attempts are limited to 5 per minute.

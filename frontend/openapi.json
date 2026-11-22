@@ -1,0 +1,1899 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Pulse",
+    "description": "Self-hosted Google Health dashboard API.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Get Health",
+        "operationId": "get_health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Get Status",
+        "operationId": "get_status",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/today": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Today",
+        "operationId": "get_today",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Today"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metrics/{metric}": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Get Metric",
+        "operationId": "get_metric",
+        "parameters": [
+          {
+            "name": "metric",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string",
+              "default": "day",
+              "title": "Granularity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricSeries"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/intraday/heart-rate": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Get Intraday Heart Rate",
+        "operationId": "get_intraday_heart_rate",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntradayHeartRate"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sleep": {
+      "get": {
+        "tags": [
+          "sleep"
+        ],
+        "summary": "Get Sleep",
+        "operationId": "get_sleep",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SleepNight"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sleep/trend": {
+      "get": {
+        "tags": [
+          "sleep"
+        ],
+        "summary": "Get Sleep Trend",
+        "operationId": "get_sleep_trend",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SleepTrend"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync": {
+      "post": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Trigger Sync",
+        "operationId": "trigger_sync",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncAccepted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/session": {
+      "get": {
+        "tags": [
+          "session"
+        ],
+        "summary": "Get Session State",
+        "operationId": "get_session_state",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "session"
+        ],
+        "summary": "Unlock",
+        "operationId": "unlock",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasscodeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Wrong passcode"
+          },
+          "429": {
+            "description": "Too many attempts"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "session"
+        ],
+        "summary": "Lock",
+        "operationId": "lock",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthStatus": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "error",
+          "checked_at"
+        ],
+        "title": "AuthStatus"
+      },
+      "BackfillStatus": {
+        "properties": {
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor"
+          },
+          "last_success": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "floor",
+          "cursor",
+          "last_success",
+          "last_error"
+        ],
+        "title": "BackfillStatus"
+      },
+      "BaselineOut": {
+        "properties": {
+          "median": {
+            "type": "number",
+            "title": "Median"
+          },
+          "q1": {
+            "type": "number",
+            "title": "Q1"
+          },
+          "q3": {
+            "type": "number",
+            "title": "Q3"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          }
+        },
+        "type": "object",
+        "required": [
+          "median",
+          "q1",
+          "q3",
+          "n"
+        ],
+        "title": "BaselineOut"
+      },
+      "DayValue": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "DayValue"
+      },
+      "Goals": {
+        "properties": {
+          "sleep_min": {
+            "type": "integer",
+            "title": "Sleep Min"
+          },
+          "steps": {
+            "type": "integer",
+            "title": "Steps"
+          },
+          "azm_weekly": {
+            "type": "integer",
+            "title": "Azm Weekly"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sleep_min",
+          "steps",
+          "azm_weekly"
+        ],
+        "title": "Goals"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "Health"
+      },
+      "HrPoint": {
+        "properties": {
+          "t": {
+            "type": "string",
+            "format": "date-time",
+            "title": "T"
+          },
+          "avg": {
+            "type": "number",
+            "title": "Avg"
+          },
+          "min": {
+            "type": "integer",
+            "title": "Min"
+          },
+          "max": {
+            "type": "integer",
+            "title": "Max"
+          }
+        },
+        "type": "object",
+        "required": [
+          "t",
+          "avg",
+          "min",
+          "max"
+        ],
+        "title": "HrPoint"
+      },
+      "IntradayHeartRate": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/HrPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneBand"
+            },
+            "type": "array",
+            "title": "Zones"
+          },
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/Period"
+            },
+            "type": "array",
+            "title": "Periods"
+          },
+          "resting_hr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resting Hr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "points",
+          "zones",
+          "periods",
+          "resting_hr"
+        ],
+        "title": "IntradayHeartRate"
+      },
+      "MetricInfo": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "first": {
+            "type": "string",
+            "format": "date",
+            "title": "First"
+          },
+          "last": {
+            "type": "string",
+            "format": "date",
+            "title": "Last"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "unit",
+          "group",
+          "days",
+          "first",
+          "last"
+        ],
+        "title": "MetricInfo"
+      },
+      "MetricSeries": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "agg": {
+            "type": "string",
+            "enum": [
+              "sum",
+              "avg"
+            ],
+            "title": "Agg"
+          },
+          "granularity": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month"
+            ],
+            "title": "Granularity"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/DayValue"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SeriesSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "label",
+          "unit",
+          "agg",
+          "granularity",
+          "points",
+          "summary"
+        ],
+        "title": "MetricSeries"
+      },
+      "PasscodeIn": {
+        "properties": {
+          "passcode": {
+            "type": "string",
+            "pattern": "^\\d{4,6}$",
+            "title": "Passcode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "passcode"
+        ],
+        "title": "PasscodeIn"
+      },
+      "Period": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "sleep",
+              "workout"
+            ],
+            "title": "Kind"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "start",
+          "end",
+          "label"
+        ],
+        "title": "Period"
+      },
+      "SeriesSummary": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "avg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "min",
+          "max",
+          "avg"
+        ],
+        "title": "SeriesSummary"
+      },
+      "SessionState": {
+        "properties": {
+          "passcode_required": {
+            "type": "boolean",
+            "title": "Passcode Required"
+          },
+          "authenticated": {
+            "type": "boolean",
+            "title": "Authenticated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "passcode_required",
+          "authenticated"
+        ],
+        "title": "SessionState"
+      },
+      "SleepConsistency": {
+        "properties": {
+          "bedtime_sd_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bedtime Sd Min"
+          },
+          "waketime_sd_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waketime Sd Min"
+          },
+          "nights": {
+            "type": "integer",
+            "title": "Nights"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bedtime_sd_min",
+          "waketime_sd_min",
+          "nights"
+        ],
+        "title": "SleepConsistency"
+      },
+      "SleepNight": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "goal_min": {
+            "type": "integer",
+            "title": "Goal Min"
+          },
+          "session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SleepSessionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "naps": {
+            "items": {
+              "$ref": "#/components/schemas/SleepSessionOut"
+            },
+            "type": "array",
+            "title": "Naps"
+          },
+          "sleeping_hr": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SleepingHeartRate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spo2": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Spo2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "skin_temp_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skin Temp Delta"
+          },
+          "hrv_rmssd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hrv Rmssd"
+          },
+          "resting_hr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resting Hr"
+          },
+          "prev_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prev Date"
+          },
+          "next_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "goal_min",
+          "session",
+          "naps",
+          "sleeping_hr",
+          "spo2",
+          "skin_temp_delta",
+          "hrv_rmssd",
+          "resting_hr",
+          "prev_date",
+          "next_date"
+        ],
+        "title": "SleepNight"
+      },
+      "SleepSessionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "is_main": {
+            "type": "boolean",
+            "title": "Is Main"
+          },
+          "sleep_type": {
+            "type": "string",
+            "title": "Sleep Type"
+          },
+          "minutes_in_bed": {
+            "type": "number",
+            "title": "Minutes In Bed"
+          },
+          "minutes_asleep": {
+            "type": "integer",
+            "title": "Minutes Asleep"
+          },
+          "minutes_awake": {
+            "type": "integer",
+            "title": "Minutes Awake"
+          },
+          "minutes_to_fall_asleep": {
+            "type": "integer",
+            "title": "Minutes To Fall Asleep"
+          },
+          "deep_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deep Min"
+          },
+          "light_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Light Min"
+          },
+          "rem_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rem Min"
+          },
+          "awake_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Awake Min"
+          },
+          "efficiency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Efficiency"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/SleepStageOut"
+            },
+            "type": "array",
+            "title": "Stages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "date",
+          "start",
+          "end",
+          "is_main",
+          "sleep_type",
+          "minutes_in_bed",
+          "minutes_asleep",
+          "minutes_awake",
+          "minutes_to_fall_asleep",
+          "deep_min",
+          "light_min",
+          "rem_min",
+          "awake_min",
+          "efficiency",
+          "stages"
+        ],
+        "title": "SleepSessionOut"
+      },
+      "SleepStageOut": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage",
+          "start",
+          "end"
+        ],
+        "title": "SleepStageOut"
+      },
+      "SleepTrend": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "goal_min": {
+            "type": "integer",
+            "title": "Goal Min"
+          },
+          "avg_asleep_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Asleep Min"
+          },
+          "consistency": {
+            "$ref": "#/components/schemas/SleepConsistency"
+          },
+          "nights": {
+            "items": {
+              "$ref": "#/components/schemas/SleepTrendNight"
+            },
+            "type": "array",
+            "title": "Nights"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "goal_min",
+          "avg_asleep_min",
+          "consistency",
+          "nights"
+        ],
+        "title": "SleepTrend"
+      },
+      "SleepTrendNight": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "asleep_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asleep Min"
+          },
+          "in_bed_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Bed Min"
+          },
+          "deep_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deep Min"
+          },
+          "light_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Light Min"
+          },
+          "rem_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rem Min"
+          },
+          "awake_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Awake Min"
+          },
+          "efficiency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Efficiency"
+          },
+          "bedtime_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bedtime Min",
+            "description": "Minutes from local midnight of wake day"
+          },
+          "waketime_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waketime Min"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "asleep_min",
+          "in_bed_min",
+          "deep_min",
+          "light_min",
+          "rem_min",
+          "awake_min",
+          "efficiency",
+          "bedtime_min",
+          "waketime_min"
+        ],
+        "title": "SleepTrendNight"
+      },
+      "SleepingHeartRate": {
+        "properties": {
+          "avg": {
+            "type": "number",
+            "title": "Avg"
+          },
+          "min": {
+            "type": "integer",
+            "title": "Min"
+          }
+        },
+        "type": "object",
+        "required": [
+          "avg",
+          "min"
+        ],
+        "title": "SleepingHeartRate"
+      },
+      "Spo2": {
+        "properties": {
+          "avg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "required": [
+          "avg",
+          "low",
+          "high"
+        ],
+        "title": "Spo2"
+      },
+      "Status": {
+        "properties": {
+          "auth": {
+            "$ref": "#/components/schemas/AuthStatus"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          },
+          "next_run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run"
+          },
+          "syncing": {
+            "type": "boolean",
+            "title": "Syncing"
+          },
+          "streams": {
+            "items": {
+              "$ref": "#/components/schemas/StreamStatus"
+            },
+            "type": "array",
+            "title": "Streams"
+          },
+          "backfill": {
+            "$ref": "#/components/schemas/BackfillStatus"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricInfo"
+            },
+            "type": "array",
+            "title": "Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "auth",
+          "last_sync",
+          "next_run",
+          "syncing",
+          "streams",
+          "backfill",
+          "metrics"
+        ],
+        "title": "Status"
+      },
+      "StepsCurve": {
+        "properties": {
+          "slot_minutes": {
+            "type": "integer",
+            "title": "Slot Minutes",
+            "default": 15
+          },
+          "today": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Today",
+            "description": "Cumulative steps per slot; null after now"
+          },
+          "median": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Median",
+            "description": "Median cumulative curve of the previous 28 days"
+          },
+          "days_in_median": {
+            "type": "integer",
+            "title": "Days In Median"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "median",
+          "days_in_median"
+        ],
+        "title": "StepsCurve"
+      },
+      "StreamStatus": {
+        "properties": {
+          "stream": {
+            "type": "string",
+            "title": "Stream"
+          },
+          "high_water_mark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Water Mark"
+          },
+          "last_success": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_error_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stream",
+          "high_water_mark",
+          "last_success",
+          "last_error",
+          "last_error_at"
+        ],
+        "title": "StreamStatus"
+      },
+      "SyncAccepted": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "started",
+              "already_running"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "SyncAccepted"
+      },
+      "Tile": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "value_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Date",
+            "description": "Day the value belongs to (may be yesterday)"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta",
+            "description": "value minus baseline median"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_range",
+              "mild",
+              "notable",
+              "none"
+            ],
+            "title": "Status"
+          },
+          "better": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "none"
+            ],
+            "title": "Better"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BaselineOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spark": {
+            "items": {
+              "$ref": "#/components/schemas/DayValue"
+            },
+            "type": "array",
+            "title": "Spark"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "unit",
+          "value",
+          "value_date",
+          "delta",
+          "status",
+          "better",
+          "baseline",
+          "spark"
+        ],
+        "title": "Tile"
+      },
+      "Today": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "last_synced": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced"
+          },
+          "goals": {
+            "$ref": "#/components/schemas/Goals"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/Tile"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "heart_rate": {
+            "$ref": "#/components/schemas/IntradayHeartRate"
+          },
+          "steps_curve": {
+            "$ref": "#/components/schemas/StepsCurve"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "generated_at",
+          "last_synced",
+          "goals",
+          "tiles",
+          "heart_rate",
+          "steps_curve"
+        ],
+        "title": "Today"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ZoneBand": {
+        "properties": {
+          "zone": {
+            "type": "string",
+            "title": "Zone"
+          },
+          "min_bpm": {
+            "type": "integer",
+            "title": "Min Bpm"
+          },
+          "max_bpm": {
+            "type": "integer",
+            "title": "Max Bpm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone",
+          "min_bpm",
+          "max_bpm"
+        ],
+        "title": "ZoneBand"
+      }
+    }
+  }
+}
