@@ -11,6 +11,7 @@ const NAV = [
   { to: "/activity", label: "Activity", icon: "M13 4a1.5 1.5 0 1 0 0 .01M9 20l3-6 3 2v5M7 12l3-3 4 1 3 3" },
   { to: "/trends", label: "Trends", icon: "M4 19V5M4 19h16M8 15l3-4 3 2 5-6" },
   { to: "/records", label: "Records", icon: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4ZM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" },
+  { to: "/data", label: "Data", icon: "M4 6c0-1.1 3.6-2 8-2s8 .9 8 2-3.6 2-8 2-8-.9-8-2ZM4 6v6c0 1.1 3.6 2 8 2s8-.9 8-2V6M4 12v6c0 1.1 3.6 2 8 2s8-.9 8-2v-6" },
   { to: "/settings", label: "Settings", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2L10 21h4l.6-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z" },
 ];
 const PRIMARY = NAV.slice(0, 4);

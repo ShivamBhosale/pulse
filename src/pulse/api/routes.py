@@ -326,6 +326,7 @@ def _service(request: Request) -> SyncService:
     return service
 
 
+MAX_RESYNC_DAYS = 400
 BUSY: dict[int | str, dict[str, Any]] = {
     409: {"description": "Another sync, backfill or resync is running"}
 }
@@ -359,9 +360,15 @@ def start_resync(request: Request, body: S.ResyncIn) -> S.JobAccepted:
     unknown = sorted(set(streams) - set(names))
     if unknown:
         raise HTTPException(422, f"unknown streams: {', '.join(unknown)}")
-    if body.since > _today(request):
-        raise HTTPException(422, "since must not be in the future")
-    if not _service(request).start_resync(streams, body.since):
+    today = _today(request)
+    until = body.until or today
+    if body.since > today or until > today:
+        raise HTTPException(422, "since and until must not be in the future")
+    if until < body.since:
+        raise HTTPException(422, "until must be on or after since")
+    if (until - body.since).days + 1 > MAX_RESYNC_DAYS:
+        raise HTTPException(422, f"re-sync at most {MAX_RESYNC_DAYS} days at a time")
+    if not _service(request).start_resync(streams, body.since, body.until):
         raise HTTPException(status.HTTP_409_CONFLICT, "another job is running")
     return S.JobAccepted(status="started", job="resync")
 
@@ -496,6 +503,66 @@ def get_tag_effects(
 ) -> S.TagEffects:
     start, end = _range(request, from_, to, 365)
     return queries.tag_effects(db, _metric(metric), start, end)
+
+
+# ---- data health -----------------------------------------------------------------------------
+
+
+def _stream_statuses(db: Session) -> list[S.StreamStatus]:
+    return [
+        S.StreamStatus(
+            stream=st.stream,
+            high_water_mark=st.high_water_mark,
+            last_success=st.last_success,
+            last_error=st.last_error,
+            last_error_at=st.last_error_at,
+        )
+        for st in sorted(queries.sync_states(db).values(), key=lambda x: x.stream)
+        if not st.stream.startswith("_")
+    ]
+
+
+@router.get(
+    "/data-health/freshness",
+    response_model=S.DataFreshness,
+    name="get_data_freshness",
+    tags=["data-health"],
+)
+def get_data_freshness(request: Request, db: DB) -> S.DataFreshness:
+    service = request.app.state.sync_service
+    return queries.data_freshness(
+        db,
+        _now(request),
+        _today(request),
+        _stream_statuses(db),
+        service.next_run if service else None,
+        service.job if service else None,
+    )
+
+
+@router.get(
+    "/data-health/coverage",
+    response_model=S.Coverage,
+    name="get_data_coverage",
+    tags=["data-health"],
+)
+def get_data_coverage(
+    request: Request, db: DB, from_: From = None, to: date | None = None
+) -> S.Coverage:
+    start, end = _range(request, from_, to, 90)
+    if (end - start).days > 800:
+        raise HTTPException(422, "coverage range is limited to 800 days")
+    return queries.coverage(db, start, end, _today(request), request.app.state.zone)
+
+
+@router.get(
+    "/data-health/day", response_model=S.DayHealth, name="get_day_health", tags=["data-health"]
+)
+def get_day_health(request: Request, db: DB, date: date | None = None) -> S.DayHealth:
+    d = date or _today(request)
+    if d > _today(request):
+        raise HTTPException(422, "date must not be in the future")
+    return queries.day_health(db, d, _now(request), request.app.state.zone)
 
 
 # ---- settings ------------------------------------------------------------------------------

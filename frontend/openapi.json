@@ -1429,6 +1429,144 @@
         }
       }
     },
+    "/api/v1/data-health/freshness": {
+      "get": {
+        "tags": [
+          "data-health"
+        ],
+        "summary": "Get Data Freshness",
+        "operationId": "get_data_freshness",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataFreshness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data-health/coverage": {
+      "get": {
+        "tags": [
+          "data-health"
+        ],
+        "summary": "Get Data Coverage",
+        "operationId": "get_data_coverage",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Coverage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data-health/day": {
+      "get": {
+        "tags": [
+          "data-health"
+        ],
+        "summary": "Get Day Health",
+        "operationId": "get_day_health",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayHealth"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/settings": {
       "get": {
         "tags": [
@@ -1947,6 +2085,180 @@
         ],
         "title": "Correlation"
       },
+      "Coverage": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "days": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SignalCoverage"
+            },
+            "type": "array",
+            "title": "Signals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "days",
+          "signals"
+        ],
+        "title": "Coverage"
+      },
+      "DataFreshness": {
+        "properties": {
+          "now": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Now"
+          },
+          "band": {
+            "$ref": "#/components/schemas/FreshItem",
+            "description": "Newest heart-rate minute: when the band last synced"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/FreshItem"
+            },
+            "type": "array",
+            "title": "Signals"
+          },
+          "streams": {
+            "items": {
+              "$ref": "#/components/schemas/StreamStatus"
+            },
+            "type": "array",
+            "title": "Streams"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          },
+          "next_run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run"
+          },
+          "job": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job"
+          }
+        },
+        "type": "object",
+        "required": [
+          "now",
+          "band",
+          "signals",
+          "streams",
+          "last_sync",
+          "next_run",
+          "job"
+        ],
+        "title": "DataFreshness"
+      },
+      "DayHealth": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "wear_fraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wear Fraction"
+          },
+          "wear_minutes": {
+            "type": "integer",
+            "title": "Wear Minutes"
+          },
+          "day_minutes": {
+            "type": "integer",
+            "title": "Day Minutes"
+          },
+          "wear_gaps": {
+            "items": {
+              "$ref": "#/components/schemas/WearGapOut"
+            },
+            "type": "array",
+            "title": "Wear Gaps"
+          },
+          "step_slots": {
+            "type": "integer",
+            "title": "Step Slots"
+          },
+          "signals": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "low",
+                "missing",
+                "untracked",
+                "today"
+              ]
+            },
+            "type": "object",
+            "title": "Signals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "wear_fraction",
+          "wear_minutes",
+          "day_minutes",
+          "wear_gaps",
+          "step_slots",
+          "signals"
+        ],
+        "title": "DayHealth"
+      },
       "DayValue": {
         "properties": {
           "date": {
@@ -2166,6 +2478,101 @@
           "source"
         ],
         "title": "ExerciseOut"
+      },
+      "FreshItem": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "latest_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest At",
+            "description": "Newest data instant (intraday signals)"
+          },
+          "latest_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Date",
+            "description": "Newest day with data"
+          },
+          "lag_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lag Min"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "behind",
+              "stale",
+              "none"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "latest_at",
+          "latest_date",
+          "lag_min",
+          "status"
+        ],
+        "title": "FreshItem"
+      },
+      "GapOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End",
+            "description": "Inclusive"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "days"
+        ],
+        "title": "GapOut"
       },
       "Goals": {
         "properties": {
@@ -2923,6 +3330,19 @@
             "format": "date",
             "title": "Since"
           },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until",
+            "description": "Inclusive; default today"
+          },
           "streams": {
             "anyOf": [
               {
@@ -3087,6 +3507,107 @@
           "passcode_set"
         ],
         "title": "SettingsOut"
+      },
+      "SignalCoverage": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "stream": {
+            "type": "string",
+            "title": "Stream",
+            "description": "Sync stream that fetches this signal (for re-sync)"
+          },
+          "first": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First",
+            "description": "First day this signal ever had data"
+          },
+          "present_days": {
+            "type": "integer",
+            "title": "Present Days"
+          },
+          "expected_days": {
+            "type": "integer",
+            "title": "Expected Days",
+            "description": "Days in range since first data, excluding today"
+          },
+          "longest_gap": {
+            "type": "integer",
+            "title": "Longest Gap"
+          },
+          "current_gap": {
+            "type": "integer",
+            "title": "Current Gap",
+            "description": "Missing days up to yesterday (0 = up to date)"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/GapOut"
+            },
+            "type": "array",
+            "title": "Gaps",
+            "description": "Newest first, at most 50"
+          },
+          "cells": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "low",
+                "missing",
+                "untracked",
+                "today"
+              ]
+            },
+            "type": "array",
+            "title": "Cells",
+            "description": "One per day in `days`"
+          },
+          "values": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Values",
+            "description": "Wear fraction 0-1 (wear only)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "stream",
+          "first",
+          "present_days",
+          "expected_days",
+          "longest_gap",
+          "current_gap",
+          "gaps",
+          "cells",
+          "values"
+        ],
+        "title": "SignalCoverage"
       },
       "SleepConsistency": {
         "properties": {
@@ -4562,6 +5083,31 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WearGapOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "minutes": {
+            "type": "integer",
+            "title": "Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "minutes"
+        ],
+        "title": "WearGapOut"
       },
       "WeekdayProfile": {
         "properties": {

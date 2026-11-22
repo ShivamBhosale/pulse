@@ -142,5 +142,7 @@ class SyncService:
     def start_backfill(self, since: date | None) -> bool:
         return self._start("backfill", lambda e: e.run_backfill(since))
 
-    def start_resync(self, streams: list[str], since: date) -> bool:
-        return self._start("resync", lambda e: e.refill(streams, since))
+    def start_resync(self, streams: list[str], since: date, until: date | None = None) -> bool:
+        """Re-fetch [since, until] (inclusive; default up to today)."""
+        end = until + timedelta(days=1) if until else None
+        return self._start("resync", lambda e: e.refill(streams, since, end))

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { api, type Settings } from "../api/client";
 import { useSettings, useStatus, useTagMutations, useTags, useUpdateSettings } from "../api/hooks";
 import type { TagInfo } from "../api/client";
@@ -230,20 +231,9 @@ function ConnectionCard() {
           </div>
           <Result m={backfill} />
         </div>
-        <details className="text-xs text-muted">
-          <summary className="cursor-pointer">Streams</summary>
-          <table className="num mt-2 w-full">
-            <tbody>
-              {st.streams.map((x) => (
-                <tr key={x.stream} className="border-t border-line">
-                  <td className="py-1 pr-2 text-ink-2">{x.stream}</td>
-                  <td className="py-1 pr-2">{fmtAgo(x.last_success)}</td>
-                  <td className="py-1">{x.last_error ? <span><span className="text-serious" aria-hidden>▲ </span>{x.last_error}</span> : "ok"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
+        <Link to="/data" className="text-xs text-muted underline decoration-dotted underline-offset-2 hover:text-ink">
+          Stream details, missing days and freshness → Data health
+        </Link>
       </div>
     </Card>
   );

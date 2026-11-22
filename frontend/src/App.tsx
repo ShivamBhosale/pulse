@@ -9,6 +9,7 @@ const ActivityPage = lazy(() => import("./pages/Activity").then((m) => ({ defaul
 const WorkoutPage = lazy(() => import("./pages/Workout").then((m) => ({ default: m.WorkoutPage })));
 const TrendsPage = lazy(() => import("./pages/Trends").then((m) => ({ default: m.TrendsPage })));
 const RecordsPage = lazy(() => import("./pages/Records").then((m) => ({ default: m.RecordsPage })));
+const DataHealthPage = lazy(() => import("./pages/DataHealth").then((m) => ({ default: m.DataHealthPage })));
 const SettingsPage = lazy(() => import("./pages/Settings").then((m) => ({ default: m.SettingsPage })));
 
 export function AppRoutes() {
@@ -22,6 +23,7 @@ export function AppRoutes() {
         <Route path="/activity/workout" element={<WorkoutPage />} />
         <Route path="/trends" element={<TrendsPage />} />
         <Route path="/records" element={<RecordsPage />} />
+        <Route path="/data" element={<DataHealthPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<TodayPage />} />
       </Routes>

@@ -32,6 +32,11 @@ export type Journal = Schemas["Journal"];
 export type JournalRange = Schemas["JournalRange"];
 export type TagEffect = Schemas["TagEffectOut"];
 export type TagEffects = Schemas["TagEffects"];
+export type Coverage = Schemas["Coverage"];
+export type SignalCoverage = Schemas["SignalCoverage"];
+export type DataFreshness = Schemas["DataFreshness"];
+export type DayHealth = Schemas["DayHealth"];
+export type CellState = Schemas["SignalCoverage"]["cells"][number];
 
 export class Locked extends Error {
   constructor() {
@@ -119,8 +124,11 @@ export const api = {
     }),
   backfill: (since: string | null) =>
     request<{ job: string }>("/api/v1/backfill", { method: "POST", body: JSON.stringify({ since }) }),
-  resync: (since: string, streams: string[] | null) =>
-    request<{ job: string }>("/api/v1/resync", { method: "POST", body: JSON.stringify({ since, streams }) }),
+  resync: (since: string, streams: string[] | null, until: string | null = null) =>
+    request<{ job: string }>("/api/v1/resync", { method: "POST", body: JSON.stringify({ since, until, streams }) }),
+  freshness: () => request<DataFreshness>("/api/v1/data-health/freshness"),
+  coverage: (from: string, to: string) => request<Coverage>(`/api/v1/data-health/coverage${qs({ from, to })}`),
+  dayHealth: (date: string) => request<DayHealth>(`/api/v1/data-health/day${qs({ date })}`),
   session: () => request<SessionState>("/api/v1/session"),
   unlock: async (passcode: string): Promise<"ok" | "wrong" | "limited"> => {
     const res = await fetch("/api/v1/session", {

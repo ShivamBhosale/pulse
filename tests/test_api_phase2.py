@@ -185,7 +185,8 @@ class _StubService:
     def start_backfill(self, since):
         return self.ok
 
-    def start_resync(self, streams, since):
+    def start_resync(self, streams, since, until=None):
+        self.last_resync = (streams, since, until)
         return self.ok
 
     def next_backup(self):

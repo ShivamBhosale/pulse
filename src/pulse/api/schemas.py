@@ -294,6 +294,7 @@ class BackfillIn(BaseModel):
 
 class ResyncIn(BaseModel):
     since: Day
+    until: Day | None = Field(default=None, description="Inclusive; default today")
     streams: list[str] | None = Field(default=None, description="Default: every stream")
 
 
@@ -520,6 +521,72 @@ class TagEffects(BaseModel):
     start: Day
     end: Day
     effects: list[TagEffectOut]
+
+
+CellState = Literal["ok", "low", "missing", "untracked", "today"]
+FreshStatus = Literal["fresh", "behind", "stale", "none"]
+
+
+class GapOut(BaseModel):
+    start: Day
+    end: Day = Field(description="Inclusive")
+    days: int
+
+
+class SignalCoverage(BaseModel):
+    key: str
+    label: str
+    stream: str = Field(description="Sync stream that fetches this signal (for re-sync)")
+    first: Day | None = Field(description="First day this signal ever had data")
+    present_days: int
+    expected_days: int = Field(description="Days in range since first data, excluding today")
+    longest_gap: int
+    current_gap: int = Field(description="Missing days up to yesterday (0 = up to date)")
+    gaps: list[GapOut] = Field(description="Newest first, at most 50")
+    cells: list[CellState] = Field(description="One per day in `days`")
+    values: list[float | None] = Field(description="Wear fraction 0-1 (wear only)")
+
+
+class Coverage(BaseModel):
+    start: Day
+    end: Day
+    days: list[Day]
+    signals: list[SignalCoverage]
+
+
+class FreshItem(BaseModel):
+    key: str
+    label: str
+    latest_at: Instant | None = Field(description="Newest data instant (intraday signals)")
+    latest_date: Day | None = Field(description="Newest day with data")
+    lag_min: float | None
+    status: FreshStatus
+
+
+class DataFreshness(BaseModel):
+    now: Instant
+    band: FreshItem = Field(description="Newest heart-rate minute: when the band last synced")
+    signals: list[FreshItem]
+    streams: list[StreamStatus]
+    last_sync: Instant | None
+    next_run: Instant | None
+    job: str | None
+
+
+class WearGapOut(BaseModel):
+    start: Instant
+    end: Instant
+    minutes: int
+
+
+class DayHealth(BaseModel):
+    date: Day
+    wear_fraction: float | None
+    wear_minutes: int
+    day_minutes: int
+    wear_gaps: list[WearGapOut]
+    step_slots: int
+    signals: dict[str, CellState]
 
 
 class Health(BaseModel):

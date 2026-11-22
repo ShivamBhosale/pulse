@@ -440,6 +440,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/data-health/freshness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Data Freshness */
+        get: operations["get_data_freshness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-health/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Data Coverage */
+        get: operations["get_data_coverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-health/day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Day Health */
+        get: operations["get_day_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -611,6 +662,65 @@ export interface components {
             /** Points */
             points: components["schemas"]["PairPoint"][];
         };
+        /** Coverage */
+        Coverage: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Days */
+            days: string[];
+            /** Signals */
+            signals: components["schemas"]["SignalCoverage"][];
+        };
+        /** DataFreshness */
+        DataFreshness: {
+            /**
+             * Now
+             * Format: date-time
+             */
+            now: string;
+            /** @description Newest heart-rate minute: when the band last synced */
+            band: components["schemas"]["FreshItem"];
+            /** Signals */
+            signals: components["schemas"]["FreshItem"][];
+            /** Streams */
+            streams: components["schemas"]["StreamStatus"][];
+            /** Last Sync */
+            last_sync: string | null;
+            /** Next Run */
+            next_run: string | null;
+            /** Job */
+            job: string | null;
+        };
+        /** DayHealth */
+        DayHealth: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Wear Fraction */
+            wear_fraction: number | null;
+            /** Wear Minutes */
+            wear_minutes: number;
+            /** Day Minutes */
+            day_minutes: number;
+            /** Wear Gaps */
+            wear_gaps: components["schemas"]["WearGapOut"][];
+            /** Step Slots */
+            step_slots: number;
+            /** Signals */
+            signals: {
+                [key: string]: "ok" | "low" | "missing" | "untracked" | "today";
+            };
+        };
         /** DayValue */
         DayValue: {
             /**
@@ -685,6 +795,46 @@ export interface components {
             avg_hr: number | null;
             /** Source */
             source: string;
+        };
+        /** FreshItem */
+        FreshItem: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Latest At
+             * @description Newest data instant (intraday signals)
+             */
+            latest_at: string | null;
+            /**
+             * Latest Date
+             * @description Newest day with data
+             */
+            latest_date: string | null;
+            /** Lag Min */
+            lag_min: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "fresh" | "behind" | "stale" | "none";
+        };
+        /** GapOut */
+        GapOut: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             * @description Inclusive
+             */
+            end: string;
+            /** Days */
+            days: number;
         };
         /** Goals */
         Goals: {
@@ -1013,6 +1163,11 @@ export interface components {
              */
             since: string;
             /**
+             * Until
+             * @description Inclusive; default today
+             */
+            until?: string | null;
+            /**
              * Streams
              * @description Default: every stream
              */
@@ -1056,6 +1211,52 @@ export interface components {
             readiness_formula: string;
             /** Passcode Set */
             passcode_set: boolean;
+        };
+        /** SignalCoverage */
+        SignalCoverage: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Stream
+             * @description Sync stream that fetches this signal (for re-sync)
+             */
+            stream: string;
+            /**
+             * First
+             * @description First day this signal ever had data
+             */
+            first: string | null;
+            /** Present Days */
+            present_days: number;
+            /**
+             * Expected Days
+             * @description Days in range since first data, excluding today
+             */
+            expected_days: number;
+            /** Longest Gap */
+            longest_gap: number;
+            /**
+             * Current Gap
+             * @description Missing days up to yesterday (0 = up to date)
+             */
+            current_gap: number;
+            /**
+             * Gaps
+             * @description Newest first, at most 50
+             */
+            gaps: components["schemas"]["GapOut"][];
+            /**
+             * Cells
+             * @description One per day in `days`
+             */
+            cells: ("ok" | "low" | "missing" | "untracked" | "today")[];
+            /**
+             * Values
+             * @description Wear fraction 0-1 (wear only)
+             */
+            values: (number | null)[];
         };
         /** SleepConsistency */
         SleepConsistency: {
@@ -1541,6 +1742,21 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WearGapOut */
+        WearGapOut: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /** Minutes */
+            minutes: number;
         };
         /** WeekdayProfile */
         WeekdayProfile: {
@@ -2413,6 +2629,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TagEffects"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_data_freshness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataFreshness"];
+                };
+            };
+        };
+    };
+    get_data_coverage: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Coverage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_day_health: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayHealth"];
                 };
             };
             /** @description Validation Error */

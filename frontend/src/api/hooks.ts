@@ -99,6 +99,37 @@ export const useTagEffect = (tag: string, metric: string, from: string, to: stri
 export const useTagEffects = (metric: string, from: string, to: string) =>
   useQuery({ queryKey: ["tag-effects", metric, from, to], queryFn: () => api.tagEffects(metric, from, to), enabled: Boolean(metric) });
 
+export const useFreshness = () =>
+  useQuery({ queryKey: ["data-health", "freshness"], queryFn: api.freshness, refetchInterval: 60_000 });
+
+export const useCoverage = (from: string, to: string) =>
+  useQuery({ queryKey: ["data-health", "coverage", from, to], queryFn: () => api.coverage(from, to) });
+
+export const useDayHealth = (date: string | null) =>
+  useQuery({ queryKey: ["data-health", "day", date], queryFn: () => api.dayHealth(date ?? ""), enabled: Boolean(date) });
+
+/** Start a re-sync, then refresh data-health views (and everything else) when the job ends. */
+export function useResync() {
+  const qc = useQueryClient();
+  const status = useStatus(true);
+  const started = useRef(false);
+  const m = useMutation({
+    mutationFn: (r: { since: string; until?: string | null; streams?: string[] | null }) => api.resync(r.since, r.streams ?? null, r.until ?? null),
+    onSuccess: () => {
+      started.current = true;
+      void qc.invalidateQueries({ queryKey: ["status"] });
+    },
+  });
+  const running = m.isPending || Boolean(status.data?.syncing);
+  useEffect(() => {
+    if (started.current && status.data && !status.data.syncing) {
+      started.current = false;
+      void qc.invalidateQueries();
+    }
+  }, [status.data, qc]);
+  return { resync: m.mutate, mutation: m, running, job: status.data?.job ?? null };
+}
+
 export const useRecords = () => useQuery({ queryKey: ["records"], queryFn: api.records });
 
 export const useSettings = () => useQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 5 * 60_000 });

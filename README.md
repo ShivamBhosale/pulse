@@ -4,7 +4,7 @@ Pulse is a self-hosted, single-user dashboard for your Fitbit data, read from th
 **Google Health API v4**. It runs on your own server at no cost. It uses no cloud hosting and
 no AI calls, and your health data stays on the server.
 
-> **Status: Phase 4 — tags & notes, on top of the dashboard, daily summary and backups.**
+> **Status: Phase 5 — data health page, on top of the dashboard, summary, backups, tags & notes.**
 > Pages: Today, Sleep, Heart & recovery, Activity (with workout detail), Trends & explore, Records & streaks and Settings. It is an installable PWA, and readiness is a personal heuristic.
 
 ## Quick start
@@ -108,6 +108,18 @@ The wording compares you with your own baselines and never diagnoses. A vital is
   - `GET /explore/tag-effects` ranks every tag against one metric.
 - **Elsewhere.** Trends charts can mark a tag's days, and every tooltip shows that day's tags and note. The Sleep page shows the evening-before tags. The summary says "Tagged last night: …".
 
+### Data health (Phase 5)
+The **Data** page (in the More menu on a phone) answers three questions.
+
+- **Is my data fresh?** The *band* line shows the newest heart-rate minute that reached Google. If it's hours old, the phone app hasn't synced the band. The page also shows when Pulse last synced and the newest day for each daily signal. Sleep counts as fresh while last night's sleep is in.
+- **Which days are missing?** A coverage grid has one row per signal (wear, daily steps, intraday steps, sleep, HRV, resting HR, SpO₂, skin temperature) and one column per day, over 30 days, 90 days or 1 year.
+  - Wear is shaded by how much of the day the band recorded heart rate. Under 50% counts as *mostly off*.
+  - Missing days are outlined. Days before a signal ever had data aren't counted, and today counts as in progress.
+- **Can I fix it?** Click a day to see its wear timeline, with breaks of an hour or more listed, and each signal's status. Then **re-sync** that day, or any gap from the list. Re-sync re-fetches just those streams for just that range (`POST /api/v1/resync` with `since`, `until` and `streams`; at most 400 days).
+  - If a gap stays after a re-sync, Google doesn't have that data either; usually the band wasn't worn.
+
+Endpoints: `GET /api/v1/data-health/freshness`, `/data-health/coverage?from&to` (at most 800 days) and `/data-health/day?date`. The maths lives in `coverage.py`: DST-aware day lengths, runs of missing days, wear gaps and freshness.
+
 ### Backups
 - **Nightly backup.** Runs at `PULSE_BACKUP_TIME` (03:30 local by default) and writes `data/backups/pulse-YYYY-MM-DD-HHMM.db.gz`. Files are mode 0600 in a 0700 directory and are never served over HTTP. Your current database (about 110 MB) compresses to about 14 MB.
 - **Rotation.** Keeps the newest backup of each of the last **7 days, 4 weeks and 6 months**, and never deletes the newest backup.
@@ -132,7 +144,8 @@ The wording compares you with your own baselines and never diagnoses. A vital is
 | `GET/PUT /journal/{date}`, `GET /journal?from&to` | A day's tags and note, or every day with entries in a range |
 | `GET /explore/tag-effect`, `/explore/tag-effects` | Tagged vs untagged days: permutation test with a plain-language verdict |
 | `GET/PUT /settings`, `PUT /settings/passcode` | Goals, units, readiness weights and passcode |
-| `POST /sync`, `/backfill`, `/resync`, `/backup` | Start background jobs. Returns 409 while another job runs. |
+| `GET /data-health/freshness`, `/coverage`, `/day` | Data freshness, missing days per signal, a single day's wear and gaps |
+| `POST /sync`, `/backfill`, `/resync`, `/backup` | Start background jobs. `/resync` takes `since`, `until` and `streams`. Returns 409 while another job runs. |
 
 Pages hide any metric your device has never reported, using `/status.metrics`. On a Fitbit Air that means floors, VO2 max and weight.
 
@@ -146,6 +159,7 @@ src/pulse/
   summary.py                                        rule-based daily summary (pure, templates)
   backup.py                                         online backup, rotation, restore, runner
   journal.py                                        tags & notes (validation, CRUD, queries)
+  coverage.py                                       data-health maths (gaps, wear, freshness)
   api/{app,routes,schemas}.py                       FastAPI, passcode gate, SPA serving, OpenAPI
   scheduler.py, security.py, prefs.py, cli.py
 frontend/                                           Vite + React + TS, TanStack Query, Tailwind, ECharts, PWA

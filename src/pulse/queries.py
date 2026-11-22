@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
+from pulse import coverage as coverage_mod
 from pulse import derived, journal, prefs, summary
 from pulse.api import schemas as S
 from pulse.datatypes import CivilWindow
@@ -963,3 +964,234 @@ def tag_effects(session: Session, m: Metric, start: date, end_inclusive: date) -
     ]
     effects.sort(key=lambda e: (e.verdict == "too_few", -abs(e.diff_in_iqr or 0.0), e.tag_label))
     return S.TagEffects(metric=m.key, start=start, end=end_inclusive, effects=effects)
+
+
+# ---- phase 5: data health ------------------------------------------------------------------
+
+# (key, label, stream, source) — source: "wear" | "sleep" | "steps_15m" | "metric:<key>"
+SIGNALS: tuple[tuple[str, str, str, str], ...] = (
+    ("wear", "Heart rate / wear", "hr_minute", "wear"),
+    ("steps", "Steps (daily)", "daily_rollups_90", "metric:steps"),
+    ("steps_15m", "Steps through the day", "steps_15m", "steps_15m"),
+    ("sleep", "Sleep", "sleep", "sleep"),
+    ("hrv", "HRV", "daily_lists", "metric:hrv_rmssd"),
+    ("resting_hr", "Resting heart rate", "daily_lists", "metric:resting_hr"),
+    ("spo2", "Blood oxygen", "daily_lists", "metric:spo2_avg"),
+    ("skin_temp", "Skin temperature", "daily_lists", "metric:skin_temp_delta"),
+)
+
+
+def _days_with(
+    session: Session, source: str, lo: date | None = None, hi: date | None = None
+) -> dict[date, float]:
+    """{day: value} where value is the count of rows (wear minutes, step slots) or 1."""
+    if source == "wear":
+        q = select(IntradayHR.civil_date, func.count()).group_by(IntradayHR.civil_date)
+        col = IntradayHR.civil_date
+    elif source == "steps_15m":
+        q = select(IntradaySteps.civil_date, func.count()).group_by(IntradaySteps.civil_date)
+        col = IntradaySteps.civil_date
+    elif source == "sleep":
+        q = (
+            select(SleepSession.civil_date, func.count())
+            .where(SleepSession.is_main.is_(True))
+            .group_by(SleepSession.civil_date)
+        )
+        col = SleepSession.civil_date
+    else:
+        metric = source.split(":", 1)[1]
+        q = (
+            select(DailyMetric.civil_date, func.count())
+            .where(DailyMetric.metric == metric)
+            .group_by(DailyMetric.civil_date)
+        )
+        col = DailyMetric.civil_date
+    if lo is not None:
+        q = q.where(col >= lo)
+    if hi is not None:
+        q = q.where(col <= hi)
+    return {d: float(n) for d, n in session.execute(q)}
+
+
+def _first_day(session: Session, source: str) -> date | None:
+    days = _days_with(session, source)
+    return min(days) if days else None
+
+
+def coverage(
+    session: Session, start: date, end_inclusive: date, today: date, zone: ZoneInfo
+) -> S.Coverage:
+    days = [start + timedelta(days=i) for i in range((end_inclusive - start).days + 1)]
+    out: list[S.SignalCoverage] = []
+    for key, label, stream, source in SIGNALS:
+        first = _first_day(session, source)
+        have = _days_with(session, source, start, end_inclusive)
+        cells: list[S.CellState] = []
+        values: list[float | None] = []
+        for d in days:
+            if d >= today:
+                state: S.CellState = "today"
+            elif first is None or d < first:
+                state = "untracked"
+            elif d not in have:
+                state = "missing"
+            elif (
+                key == "wear"
+                and have[d] / coverage_mod.day_minutes(d, zone) < coverage_mod.LOW_WEAR
+            ):
+                state = "low"
+            else:
+                state = "ok"
+            cells.append(state)
+            values.append(
+                round(min(1.0, have.get(d, 0.0) / coverage_mod.day_minutes(d, zone)), 3)
+                if key == "wear" and state != "untracked"
+                else None
+            )
+        gap_list = coverage_mod.gaps(
+            have, max(first, start) if first else None, end_inclusive, today
+        )
+        expected = sum(1 for c in cells if c in ("ok", "low", "missing"))
+        yesterday = today - timedelta(days=1)
+        current = next((g.days for g in gap_list if g.end == yesterday), 0)
+        out.append(
+            S.SignalCoverage(
+                key=key,
+                label=label,
+                stream=stream,
+                first=first,
+                present_days=sum(1 for c in cells if c in ("ok", "low")),
+                expected_days=expected,
+                longest_gap=max((g.days for g in gap_list), default=0),
+                current_gap=current,
+                gaps=[S.GapOut(start=g.start, end=g.end, days=g.days) for g in reversed(gap_list)][
+                    :50
+                ],
+                cells=cells,
+                values=values,
+            )
+        )
+    return S.Coverage(start=start, end=end_inclusive, days=days, signals=out)
+
+
+def data_freshness(
+    session: Session,
+    now: datetime,
+    today: date,
+    streams: list[S.StreamStatus],
+    next_run: datetime | None,
+    job: str | None,
+) -> S.DataFreshness:
+    def instant_item(
+        key: str, label: str, latest: datetime | None, width: timedelta
+    ) -> S.FreshItem:
+        end = latest + width if latest else None
+        lag, st = coverage_mod.freshness(end, now)
+        return S.FreshItem(
+            key=key, label=label, latest_at=end, latest_date=None, lag_min=lag, status=st
+        )
+
+    band = instant_item(
+        "wear",
+        "Band (heart rate)",
+        session.execute(select(func.max(IntradayHR.ts_utc))).scalar(),
+        timedelta(minutes=1),
+    )
+    items = [
+        band,
+        instant_item(
+            "steps_15m",
+            "Steps through the day",
+            session.execute(select(func.max(IntradaySteps.ts_utc))).scalar(),
+            timedelta(minutes=15),
+        ),
+    ]
+    # Sleep ends in the morning, so judge it by day: last night's sleep is "fresh" all day.
+    last_sleep = session.execute(select(func.max(SleepSession.end_utc))).scalar()
+    sleep_lag, _ = coverage_mod.freshness(last_sleep, now)
+    last_sleep_day: date | None = session.execute(
+        select(func.max(SleepSession.civil_date))
+    ).scalar()
+    sleep_days = (today - last_sleep_day).days if last_sleep_day else None
+    items.append(
+        S.FreshItem(
+            key="sleep",
+            label="Last sleep",
+            latest_at=last_sleep,
+            latest_date=None,
+            lag_min=sleep_lag,
+            status="none"
+            if sleep_days is None
+            else "fresh"
+            if sleep_days <= 1
+            else "behind"
+            if sleep_days == 2
+            else "stale",
+        )
+    )
+    for key, label, _stream, source in SIGNALS:
+        if not source.startswith("metric:"):
+            continue
+        metric = source.split(":", 1)[1]
+        latest = session.execute(
+            select(func.max(DailyMetric.civil_date)).where(DailyMetric.metric == metric)
+        ).scalar()
+        behind = (today - latest).days if latest else None
+        status: S.FreshStatus = (
+            "none"
+            if behind is None
+            else "fresh"
+            if behind <= 1
+            else "behind"
+            if behind == 2
+            else "stale"
+        )
+        items.append(
+            S.FreshItem(
+                key=key,
+                label=label,
+                latest_at=None,
+                latest_date=latest,
+                lag_min=None if behind is None else behind * 1440.0,
+                status=status,
+            )
+        )
+    successes = [st.last_success for st in streams if st.last_success]
+    return S.DataFreshness(
+        now=now,
+        band=band,
+        signals=items,
+        streams=streams,
+        last_sync=max(successes) if successes else None,
+        next_run=next_run,
+        job=job,
+    )
+
+
+def day_health(session: Session, d: date, now: datetime, zone: ZoneInfo) -> S.DayHealth:
+    lo, hi = coverage_mod.day_bounds(d, zone)
+    minutes = list(
+        session.scalars(
+            select(IntradayHR.ts_utc).where(IntradayHR.ts_utc >= lo, IntradayHR.ts_utc < hi)
+        )
+    )
+    total = coverage_mod.day_minutes(d, zone)
+    window_end = min(hi, now)
+    wear_gaps = coverage_mod.intraday_gaps(minutes, (lo, window_end)) if window_end > lo else []
+    step_slots = (
+        session.execute(
+            select(func.count()).select_from(IntradaySteps).where(IntradaySteps.civil_date == d)
+        ).scalar()
+        or 0
+    )
+    today = now.astimezone(zone).date()
+    cov = coverage(session, d, d, today, zone)
+    return S.DayHealth(
+        date=d,
+        wear_fraction=round(len(minutes) / total, 3) if d <= today else None,
+        wear_minutes=len(minutes),
+        day_minutes=total,
+        wear_gaps=[S.WearGapOut(start=g.start, end=g.end, minutes=g.minutes) for g in wear_gaps],
+        step_slots=int(step_slots),
+        signals={sig.key: sig.cells[0] for sig in cov.signals},
+    )
