@@ -1,0 +1,26 @@
+# systemd alternative to docker compose.
+# Install: see README "Running without Docker". Assumes the repo is at /opt/pulse
+# and a `pulse` system user owns /opt/pulse/data.
+[Unit]
+Description=Pulse health dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pulse
+Group=pulse
+WorkingDirectory=/opt/pulse
+EnvironmentFile=/opt/pulse/.env
+ExecStart=/opt/pulse/.venv/bin/pulse serve
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/pulse/data /opt/pulse/fixtures
+
+[Install]
+WantedBy=multi-user.target

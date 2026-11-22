@@ -1,0 +1,22 @@
+# Secrets and health data — never commit
+.env
+data/
+fixtures/
+*.token.json
+token.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+
+# Frontend (phase 1+)
+node_modules/
+frontend/dist/
+
+.DS_Store
