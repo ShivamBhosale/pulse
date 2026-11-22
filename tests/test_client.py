@@ -157,3 +157,26 @@ def test_throttle_waits_min_interval():
     now[0] += 0.2
     client.get_identity()
     assert sleeps == [pytest.approx(0.3)]
+
+
+def test_transport_errors_are_retried_then_typed():
+    from pulse.client import TransportFailure
+
+    sleeps: list[float] = []
+    n = 0
+
+    def flaky(req):
+        nonlocal n
+        n += 1
+        if n == 1:
+            raise httpx.ReadTimeout("slow", request=req)
+        return httpx.Response(200, json={"ok": 1})
+
+    assert make(flaky, sleeps=sleeps).get_identity() == {"ok": 1}
+    assert len(sleeps) == 1
+
+    def dead(req):
+        raise httpx.ConnectError("down", request=req)
+
+    with pytest.raises(TransportFailure):
+        make(dead).get_identity()

@@ -247,9 +247,17 @@ def test_sleep_sessions_stages_and_daily_metrics():
 
 def test_nan_values_are_treated_as_missing():
     assert P.num("NaN") is None and P.num(float("inf")) is None
-    page = {"dataPoints": [{"dailySleepTemperatureDerivations": {
-        "date": {"year": 2026, "month": 5, "day": 27},
-        "nightlyTemperatureCelsius": 33.6, "baselineTemperatureCelsius": "NaN"}}]}
+    page = {
+        "dataPoints": [
+            {
+                "dailySleepTemperatureDerivations": {
+                    "date": {"year": 2026, "month": 5, "day": 27},
+                    "nightlyTemperatureCelsius": 33.6,
+                    "baselineTemperatureCelsius": "NaN",
+                }
+            }
+        ]
+    }
     b = P.parse_daily_list("daily-sleep-temperature-derivations", [page], TZ, AT)
     assert {m for (_, m) in daily(b)} == {"skin_temp_nightly"}  # no baseline, no delta
     b2 = P.Batch()

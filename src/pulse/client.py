@@ -55,6 +55,10 @@ class ServerError(HealthApiError):
     pass
 
 
+class TransportFailure(HealthApiError):
+    """Timeouts / connection errors that persisted through every retry."""
+
+
 def _parse_error(resp: httpx.Response) -> HealthApiError:
     code, message, reason = "UNKNOWN", resp.reason_phrase, None
     try:
@@ -124,7 +128,9 @@ class HealthClient:
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._token = token_provider
-        self._http = http or httpx.Client(base_url=base_url, timeout=60.0)
+        self._http = http or httpx.Client(
+            base_url=base_url, timeout=httpx.Timeout(120.0, connect=15.0)
+        )
         self._min_interval = min_interval
         self._retry = retry or RetryPolicy()
         self._sleep = sleep
@@ -167,7 +173,20 @@ class HealthClient:
                 "Accept": "application/json",
             }
             self.request_count += 1
-            resp = self._http.request(method, path, params=params, json=json, headers=headers)
+            try:
+                resp = self._http.request(method, path, params=params, json=json, headers=headers)
+            except httpx.TransportError as exc:  # timeouts, resets, DNS hiccups
+                if attempt + 1 < self._retry.max_attempts:
+                    delay = self._retry.delay(attempt, None)
+                    log.warning(
+                        "retrying %s %s after %s (%.1fs)", method, path, type(exc).__name__, delay
+                    )
+                    self._sleep(delay)
+                    attempt += 1
+                    continue
+                raise TransportFailure(
+                    0, type(exc).__name__, str(exc) or "transport error"
+                ) from exc
             if resp.is_success:
                 body: JSON = resp.json() if resp.content else {}
                 return body
