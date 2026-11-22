@@ -76,6 +76,7 @@ class DayFacts:
     load_ratio: float | None = None
     streaks: tuple[StreakFact, ...] = ()
     records: tuple[RecordFact, ...] = ()
+    evening_tags_before: tuple[str, ...] = ()  # labels of evening tags on the day before
 
 
 # ---- output -------------------------------------------------------------------------------
@@ -373,6 +374,14 @@ def rule_load(f: DayFacts) -> Sentence | None:
     )
 
 
+def rule_tags(f: DayFacts) -> Sentence | None:
+    if not f.evening_tags_before:
+        return None
+    labels = ", ".join(f.evening_tags_before)
+    when = "last night" if f.is_today else "the evening before"
+    return Sentence(f"Tagged {when}: {labels}.", "neutral", 58, ("tags",))
+
+
 RULES: tuple[Callable[[DayFacts], Sentence | list[Sentence] | None], ...] = (
     rule_readiness,
     rule_sleep,
@@ -383,6 +392,7 @@ RULES: tuple[Callable[[DayFacts], Sentence | list[Sentence] | None], ...] = (
     rule_streaks,
     rule_records,
     rule_load,
+    rule_tags,
 )
 
 

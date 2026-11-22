@@ -4,7 +4,7 @@ Pulse is a self-hosted, single-user dashboard for your Fitbit data, read from th
 **Google Health API v4**. It runs on your own server at no cost. It uses no cloud hosting and
 no AI calls, and your health data stays on the server.
 
-> **Status: Phase 3 — daily summary and automatic backups, on top of the full dashboard.**
+> **Status: Phase 4 — tags & notes, on top of the dashboard, daily summary and backups.**
 > Pages: Today, Sleep, Heart & recovery, Activity (with workout detail), Trends & explore, Records & streaks and Settings. It is an installable PWA, and readiness is a personal heuristic.
 
 ## Quick start
@@ -96,6 +96,18 @@ Each rule returns a sentence or nothing. Sentences are ranked by priority, and a
 
 The wording compares you with your own baselines and never diagnoses. A vital is only mentioned when the difference is real: it must be well outside your usual range, or a bit outside it two days running, and above a minimum size (for example 2 bpm for resting HR). The summary is computed on request in about 5 ms, so it always matches re-synced data and changed goals.
 
+### Tags & notes (Phase 4)
+- **Journal.** Today → Journal lets you tag a day (Yesterday is one tap away) and write a note of up to 2,000 characters. Notes save automatically.
+- **Your data only.** The `tags`, `day_tags` and `day_notes` tables are filled only by you. Sync never touches them, and backups include them.
+- **Tags.** There are 8 defaults: Alcohol, Late meal, Late caffeine and Screen late are evening tags; Sick, Travel, Stress and Rest day are day tags. Add, rename and archive tags in Settings. Tags are never deleted, so their history stays.
+- **Which day a tag affects.** You tag the day something happened. Overnight metrics (sleep, HRV, resting HR, SpO₂, skin temperature, readiness) belong to the day you wake up. An *evening* tag on Tuesday is therefore compared with Wednesday's overnight metrics; everything else compares the same day. "Same day" and "Next day" override this per comparison.
+- **Comparison.** Trends → Tags compares tagged days with untagged days for any metric (`GET /api/v1/explore/tag-effect`). It shows each group's median, the difference, and that difference measured against your usual spread (IQR).
+  - Significance comes from a **permutation test**: 5,000 shuffles from a fixed seed, so results are deterministic.
+  - The verdict reads "Clear difference" (p < 0.05 with at least 5 tagged days), "Possible difference" (p < 0.2), "No clear difference" or "Not enough tagged days" (fewer than 3).
+  - Days tagged Sick are left out of every other tag's comparison group.
+  - `GET /explore/tag-effects` ranks every tag against one metric.
+- **Elsewhere.** Trends charts can mark a tag's days, and every tooltip shows that day's tags and note. The Sleep page shows the evening-before tags. The summary says "Tagged last night: …".
+
 ### Backups
 - **Nightly backup.** Runs at `PULSE_BACKUP_TIME` (03:30 local by default) and writes `data/backups/pulse-YYYY-MM-DD-HHMM.db.gz`. Files are mode 0600 in a 0700 directory and are never served over HTTP. Your current database (about 110 MB) compresses to about 14 MB.
 - **Rotation.** Keeps the newest backup of each of the last **7 days, 4 weeks and 6 months**, and never deletes the newest backup.
@@ -116,6 +128,9 @@ The wording compares you with your own baselines and never diagnoses. A vital is
 | `GET /exercises`, `/exercises/{id}` | Workouts. Detail includes the HR curve and time in each zone. |
 | `GET /records` | Personal bests and streaks |
 | `GET /summary?date=` | Rule-based daily summary. It's also included in `/today`. |
+| `GET/POST /tags`, `PATCH /tags/{key}` | Tags: create, rename, change kind, archive |
+| `GET/PUT /journal/{date}`, `GET /journal?from&to` | A day's tags and note, or every day with entries in a range |
+| `GET /explore/tag-effect`, `/explore/tag-effects` | Tagged vs untagged days: permutation test with a plain-language verdict |
 | `GET/PUT /settings`, `PUT /settings/passcode` | Goals, units, readiness weights and passcode |
 | `POST /sync`, `/backfill`, `/resync`, `/backup` | Start background jobs. Returns 409 while another job runs. |
 
@@ -130,6 +145,7 @@ src/pulse/
   derived.py, derive.py                             derived metrics: pure maths + recompute job
   summary.py                                        rule-based daily summary (pure, templates)
   backup.py                                         online backup, rotation, restore, runner
+  journal.py                                        tags & notes (validation, CRUD, queries)
   api/{app,routes,schemas}.py                       FastAPI, passcode gate, SPA serving, OpenAPI
   scheduler.py, security.py, prefs.py, cli.py
 frontend/                                           Vite + React + TS, TanStack Query, Tailwind, ECharts, PWA
@@ -148,6 +164,7 @@ frontend/                                           Vite + React + TS, TanStack 
 | `exercises` | Workouts. Band and Health Connect duplicates are merged. |
 | `sync_state` | Per-stream sync bookkeeping. |
 | `settings` | Goals, units and the passcode hash. |
+| `tags`, `day_tags`, `day_notes` | Your tags and notes (migration 0002). Sync never writes to these. |
 
 These tables are enough to build a future template-based daily summary without schema changes.
 

@@ -451,6 +451,77 @@ class PasscodeIn(BaseModel):
     passcode: str = Field(pattern=r"^\d{4,6}$")
 
 
+TagKind = Literal["evening", "day"]
+
+
+class TagOut(BaseModel):
+    key: str
+    label: str
+    kind: TagKind = Field(description="evening: affects the following night")
+    archived: bool
+    uses: int
+    last_used: Day | None
+
+
+class TagIn(BaseModel):
+    label: str = Field(min_length=1, max_length=40)
+    kind: TagKind = "day"
+
+
+class TagPatch(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=40)
+    kind: TagKind | None = None
+    archived: bool | None = None
+
+
+class Journal(BaseModel):
+    date: Day
+    tags: list[str]
+    note: str
+
+
+class JournalIn(BaseModel):
+    tags: list[str] = Field(default_factory=list, max_length=30)
+    note: str = Field(default="", max_length=2000)
+
+
+class JournalRange(BaseModel):
+    start: Day
+    end: Day
+    days: list[Journal]
+
+
+class TagEffectOut(BaseModel):
+    tag: str
+    tag_label: str
+    metric: str
+    metric_label: str
+    unit: str
+    lag: int = Field(description="Metric day = tag day + lag (1 = the following night)")
+    start: Day
+    end: Day
+    n_tagged: int
+    n_untagged: int
+    median_tagged: float | None
+    median_untagged: float | None
+    mean_tagged: float | None
+    mean_untagged: float | None
+    diff: float | None = Field(description="Median tagged minus median untagged")
+    diff_in_iqr: float | None = Field(description="diff divided by the untagged IQR")
+    p: float | None = Field(description="Permutation test p-value (two-sided)")
+    verdict: Literal["clear", "possible", "none", "too_few"]
+    verdict_text: str
+    tagged: list[DayValue] = []
+    untagged: list[DayValue] = []
+
+
+class TagEffects(BaseModel):
+    metric: str
+    start: Day
+    end: Day
+    effects: list[TagEffectOut]
+
+
 class Health(BaseModel):
     status: str
     version: str

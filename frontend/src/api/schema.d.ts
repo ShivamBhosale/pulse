@@ -333,6 +333,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tags */
+        get: operations["list_tags"];
+        put?: never;
+        /** Create Tag */
+        post: operations["create_tag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tags/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Tag */
+        patch: operations["update_tag"];
+        trace?: never;
+    };
+    "/api/v1/journal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Journal */
+        get: operations["list_journal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/journal/{day}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Journal */
+        get: operations["get_journal"];
+        /** Put Journal */
+        put: operations["put_journal"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/explore/tag-effect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tag Effect
+         * @description Tagged vs untagged days for one metric (permutation test, deterministic).
+         */
+        get: operations["get_tag_effect"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/explore/tag-effects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Tag Effects */
+        get: operations["get_tag_effects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -673,6 +780,43 @@ export interface components {
             status: "started";
             /** Job */
             job: string;
+        };
+        /** Journal */
+        Journal: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Tags */
+            tags: string[];
+            /** Note */
+            note: string;
+        };
+        /** JournalIn */
+        JournalIn: {
+            /** Tags */
+            tags?: string[];
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** JournalRange */
+        JournalRange: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Days */
+            days: components["schemas"]["Journal"][];
         };
         /** MetricInfo */
         MetricInfo: {
@@ -1193,6 +1337,134 @@ export interface components {
              * @enum {string}
              */
             status: "started" | "already_running";
+        };
+        /** TagEffectOut */
+        TagEffectOut: {
+            /** Tag */
+            tag: string;
+            /** Tag Label */
+            tag_label: string;
+            /** Metric */
+            metric: string;
+            /** Metric Label */
+            metric_label: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Lag
+             * @description Metric day = tag day + lag (1 = the following night)
+             */
+            lag: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** N Tagged */
+            n_tagged: number;
+            /** N Untagged */
+            n_untagged: number;
+            /** Median Tagged */
+            median_tagged: number | null;
+            /** Median Untagged */
+            median_untagged: number | null;
+            /** Mean Tagged */
+            mean_tagged: number | null;
+            /** Mean Untagged */
+            mean_untagged: number | null;
+            /**
+             * Diff
+             * @description Median tagged minus median untagged
+             */
+            diff: number | null;
+            /**
+             * Diff In Iqr
+             * @description diff divided by the untagged IQR
+             */
+            diff_in_iqr: number | null;
+            /**
+             * P
+             * @description Permutation test p-value (two-sided)
+             */
+            p: number | null;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "clear" | "possible" | "none" | "too_few";
+            /** Verdict Text */
+            verdict_text: string;
+            /**
+             * Tagged
+             * @default []
+             */
+            tagged: components["schemas"]["DayValue"][];
+            /**
+             * Untagged
+             * @default []
+             */
+            untagged: components["schemas"]["DayValue"][];
+        };
+        /** TagEffects */
+        TagEffects: {
+            /** Metric */
+            metric: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Effects */
+            effects: components["schemas"]["TagEffectOut"][];
+        };
+        /** TagIn */
+        TagIn: {
+            /** Label */
+            label: string;
+            /**
+             * Kind
+             * @default day
+             * @enum {string}
+             */
+            kind: "evening" | "day";
+        };
+        /** TagOut */
+        TagOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Kind
+             * @description evening: affects the following night
+             * @enum {string}
+             */
+            kind: "evening" | "day";
+            /** Archived */
+            archived: boolean;
+            /** Uses */
+            uses: number;
+            /** Last Used */
+            last_used: string | null;
+        };
+        /** TagPatch */
+        TagPatch: {
+            /** Label */
+            label?: string | null;
+            /** Kind */
+            kind?: ("evening" | "day") | null;
+            /** Archived */
+            archived?: boolean | null;
         };
         /** Tile */
         Tile: {
@@ -1890,6 +2162,267 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_tags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagOut"][];
+                };
+            };
+        };
+    };
+    create_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagOut"];
+                };
+            };
+            /** @description Tag exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_journal: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalRange"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_journal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Journal"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_journal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                day: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JournalIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Journal"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tag_effect: {
+        parameters: {
+            query: {
+                tag: string;
+                metric: string;
+                from?: string | null;
+                to?: string | null;
+                lag?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagEffectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tag_effects: {
+        parameters: {
+            query: {
+                metric: string;
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagEffects"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

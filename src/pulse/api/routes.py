@@ -9,11 +9,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
-from pulse import __version__, derive, derived, prefs, queries, security
+from pulse import __version__, derive, derived, journal, prefs, queries, security
 from pulse.api import schemas as S
 from pulse.backup import BACKUP_ROW, BackupRunner, list_backups
 from pulse.metrics import CATALOG, Metric
-from pulse.models import SyncState
+from pulse.models import SyncState, Tag
 from pulse.scheduler import SyncService
 from pulse.sync.engine import AUTH_ROW, BACKFILL_ROW
 from pulse.sync.streams import STREAMS
@@ -379,6 +379,123 @@ def start_backup(request: Request) -> S.JobAccepted:
     if not runner.start():
         raise HTTPException(status.HTTP_409_CONFLICT, "a backup is already running")
     return S.JobAccepted(status="started", job="backup")
+
+
+# ---- journal: tags and notes ----------------------------------------------------------------
+
+
+def _tag_out(t: journal.TagInfo) -> S.TagOut:
+    return S.TagOut(
+        key=t.key,
+        label=t.label,
+        kind="evening" if t.kind == "evening" else "day",
+        archived=t.archived,
+        uses=t.uses,
+        last_used=t.last_used,
+    )
+
+
+@router.get("/tags", response_model=list[S.TagOut], name="list_tags", tags=["journal"])
+def list_tags(db: DB) -> list[S.TagOut]:
+    return [_tag_out(t) for t in journal.list_tags(db)]
+
+
+@router.post(
+    "/tags",
+    response_model=S.TagOut,
+    status_code=status.HTTP_201_CREATED,
+    name="create_tag",
+    tags=["journal"],
+    responses={409: {"description": "Tag exists"}},
+)
+def create_tag(request: Request, body: S.TagIn, db: DB) -> S.TagOut:
+    try:
+        tag = journal.create_tag(db, body.label, body.kind, _now(request))
+    except journal.TagExists as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except journal.JournalError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    db.commit()
+    return next(_tag_out(t) for t in journal.list_tags(db) if t.key == tag.key)
+
+
+@router.patch("/tags/{key}", response_model=S.TagOut, name="update_tag", tags=["journal"])
+def update_tag(key: str, body: S.TagPatch, db: DB) -> S.TagOut:
+    try:
+        tag = journal.update_tag(db, key, label=body.label, kind=body.kind, archived=body.archived)
+    except journal.JournalError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if tag is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such tag")
+    db.commit()
+    return next(_tag_out(t) for t in journal.list_tags(db) if t.key == key)
+
+
+def _journal_out(j: journal.DayJournal) -> S.Journal:
+    return S.Journal(date=j.date, tags=j.tags, note=j.note)
+
+
+@router.get("/journal", response_model=S.JournalRange, name="list_journal", tags=["journal"])
+def list_journal(
+    request: Request, db: DB, from_: From = None, to: date | None = None
+) -> S.JournalRange:
+    start, end = _range(request, from_, to, 90)
+    return S.JournalRange(
+        start=start, end=end, days=[_journal_out(j) for j in journal.journal_range(db, start, end)]
+    )
+
+
+@router.get("/journal/{day}", response_model=S.Journal, name="get_journal", tags=["journal"])
+def get_journal(db: DB, day: date) -> S.Journal:
+    return _journal_out(journal.get_journal(db, day))
+
+
+@router.put("/journal/{day}", response_model=S.Journal, name="put_journal", tags=["journal"])
+def put_journal(request: Request, day: date, body: S.JournalIn, db: DB) -> S.Journal:
+    if day > _today(request):
+        raise HTTPException(422, "can't write a journal for a future day")
+    try:
+        out = journal.put_journal(db, day, body.tags, body.note, _now(request))
+    except journal.JournalError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    db.commit()
+    return _journal_out(out)
+
+
+def _tag(db: Session, key: str) -> Tag:
+    tag = db.get(Tag, key)
+    if tag is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown tag {key!r}")
+    return tag
+
+
+@router.get(
+    "/explore/tag-effect", response_model=S.TagEffectOut, name="get_tag_effect", tags=["explore"]
+)
+def get_tag_effect(
+    request: Request,
+    db: DB,
+    tag: str,
+    metric: str,
+    from_: From = None,
+    to: date | None = None,
+    lag: Annotated[str, Query(pattern="^(auto|0|1)$")] = "auto",
+) -> S.TagEffectOut:
+    """Tagged vs untagged days for one metric (permutation test, deterministic)."""
+    start, end = _range(request, from_, to, 365)
+    return queries.tag_effect_out(
+        db, _tag(db, tag), _metric(metric), start, end, None if lag == "auto" else int(lag)
+    )
+
+
+@router.get(
+    "/explore/tag-effects", response_model=S.TagEffects, name="get_tag_effects", tags=["explore"]
+)
+def get_tag_effects(
+    request: Request, db: DB, metric: str, from_: From = None, to: date | None = None
+) -> S.TagEffects:
+    start, end = _range(request, from_, to, 365)
+    return queries.tag_effects(db, _metric(metric), start, end)
 
 
 # ---- settings ------------------------------------------------------------------------------

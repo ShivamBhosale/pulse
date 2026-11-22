@@ -2,7 +2,7 @@
 // Same conventions as options.ts: thin marks, one y-axis, recessive grid, legend only for ≥2
 // series, values in ink tokens, a tooltip on every chart.
 import type { EChartsCoreOption } from "echarts/core";
-import type { Correlation, ExerciseDetail, Heatmap, MetricSeries, WeekdayProfile } from "../api/client";
+import type { Correlation, ExerciseDetail, Heatmap, MetricSeries, TagEffect, WeekdayProfile } from "../api/client";
 import { fmtDay, fmtNum, fmtTime } from "../lib/format";
 import type { Granularity } from "../lib/range";
 import type { Palette } from "../lib/theme";
@@ -43,6 +43,11 @@ export interface TrendOpts {
   /** colour bars by sign around 0 with the diverging pair */
   diverging?: boolean;
   color?: string;
+  /** dates to mark with a thin vertical line (e.g. days with a chosen tag) */
+  markers?: string[];
+  markerLabel?: string;
+  /** extra tooltip line per date (tags · note) */
+  annotations?: Record<string, string>;
 }
 
 /** One metric over time; optional baseline/range band, goal line or diverging bars. */
@@ -81,6 +86,13 @@ export function trendOption(s: MetricSeries, o: TrendOpts, p: Palette): EChartsC
       },
     );
   }
+  const markerLines = g === "day" ? (o.markers ?? []).filter((d) => dates.includes(d)).map((d) => ({ xAxis: d })) : [];
+  const markerStyle = {
+    silent: true,
+    symbol: "none",
+    lineStyle: { color: p.accent, type: "dotted" as const, width: 1, opacity: 0.8 },
+    label: { show: false },
+  };
   series.push({
     name: s.label,
     type: o.kind,
@@ -106,7 +118,9 @@ export function trendOption(s: MetricSeries, o: TrendOpts, p: Palette): EChartsC
           }
         : o.diverging
           ? { silent: true, symbol: "none", lineStyle: { color: p.axis, width: 1 }, label: { show: false }, data: [{ yAxis: 0 }] }
-          : undefined,
+          : markerLines.length
+            ? { ...markerStyle, data: markerLines }
+            : undefined,
   });
   const durMax = Math.max(0, ...values.map((v) => v ?? 0), ...(o.band ?? []).map((b) => b.hi));
   const durInt = durationInterval(s.metric, durMax);
@@ -144,7 +158,8 @@ export function trendOption(s: MetricSeries, o: TrendOpts, p: Palette): EChartsC
         return (
           tipHeader(d, g, p) +
           row(color, s.label, fmt(values[i])) +
-          (b ? `<div style="color:${p.muted};font-size:11px;margin-top:2px">${o.bandLabel ?? "usual"} ${fmt(b.lo)} – ${fmt(b.hi)}</div>` : "")
+          (b ? `<div style="color:${p.muted};font-size:11px;margin-top:2px">${o.bandLabel ?? "usual"} ${fmt(b.lo)} – ${fmt(b.hi)}</div>` : "") +
+          (o.annotations?.[d] ? `<div style="color:${p.ink2};font-size:11px;margin-top:4px;max-width:240px;white-space:normal">${escapeHtml(o.annotations[d])}</div>` : "")
         );
       },
     },
@@ -485,6 +500,62 @@ export function workoutHrOption(d: ExerciseDetail, p: Palette): EChartsCoreOptio
         itemStyle: { color: p.accent },
         markArea: { silent: true, data: zoneAreas },
       },
+    ],
+  };
+}
+
+
+function escapeHtml(t: string): string {
+  return t.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+}
+
+/** Tagged vs untagged days as two rows of dots, with each group's median as a bar. */
+export function stripOption(e: TagEffect, units: Units, p: Palette): EChartsCoreOption {
+  const fmt = (v: number | null | undefined) => fmtMetric(v, e.unit, units, e.metric);
+  // Deterministic jitter from the date so dots don't stack.
+  const jitter = (iso: string) => {
+    let h = 0;
+    for (const c of iso) h = (h * 31 + c.charCodeAt(0)) % 997;
+    return (h / 997 - 0.5) * 0.5;
+  };
+  const rows = ["Without tag", `With ${e.tag_label}`];
+  const pts = (list: { date: string; value: number | null }[], row: number) =>
+    list.filter((x) => x.value != null).map((x) => [x.value as number, row + jitter(x.date), x.date]);
+  const medians = [
+    e.median_untagged != null ? [e.median_untagged, 0] : null,
+    e.median_tagged != null ? [e.median_tagged, 1] : null,
+  ].filter(Boolean);
+  return {
+    ...base(p),
+    grid: { left: 96, right: 16, top: 8, bottom: 28 },
+    xAxis: {
+      type: "value",
+      scale: true,
+      ...axisCommon(p),
+      axisLabel: { ...axisCommon(p).axisLabel, formatter: (v: number) => fmtAxis(v, e.unit, units, e.metric) },
+    },
+    yAxis: {
+      type: "value",
+      min: -0.6,
+      max: 1.6,
+      interval: 1,
+      ...axisCommon(p),
+      axisLine: { show: false },
+      splitLine: { show: false },
+      axisLabel: { color: p.ink2, fontSize: 11, formatter: (v: number) => rows[Math.round(v)] ?? "" },
+    },
+    tooltip: {
+      ...(base(p).tooltip as object),
+      trigger: "item",
+      formatter: (x: { seriesName: string; data: [number, number, string?] }) =>
+        x.seriesName === "Median"
+          ? row(p.ink, `Median, ${rows[Math.round(x.data[1])]?.toLowerCase()}`, fmt(x.data[0]))
+          : `<div style="color:${p.muted};margin-bottom:4px">${x.data[2] ? fmtDay(x.data[2]) : ""}</div>` + row(x.seriesName === "Tagged" ? p.accent : p.neutral, e.metric_label, fmt(x.data[0])),
+    },
+    series: [
+      { name: "Untagged", type: "scatter", data: pts(e.untagged, 0), symbolSize: 6, itemStyle: { color: p.neutral, opacity: 0.7 } },
+      { name: "Tagged", type: "scatter", data: pts(e.tagged, 1), symbolSize: 9, itemStyle: { color: p.accent, borderColor: p.surface, borderWidth: 1 } },
+      { name: "Median", type: "scatter", data: medians, symbol: "rect", symbolSize: [3, 34], itemStyle: { color: p.ink }, z: 5 },
     ],
   };
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useSleep, useSleepTrend } from "../api/hooks";
+import { useJournal, useSleep, useSleepTrend, useTags } from "../api/hooks";
 import type { SleepSession } from "../api/client";
 import {
   STAGE_LABEL,
@@ -19,6 +19,28 @@ import { usePalette } from "../lib/theme";
 const RANGES = ["14D", "30D", "90D"] as const;
 type Range = (typeof RANGES)[number];
 const RANGE_DAYS: Record<Range, number> = { "14D": 14, "30D": 30, "90D": 90 };
+
+/** Read-only: what you tagged the evening before this night (and that day's note). */
+function EveningBefore({ wakeDate }: { wakeDate: string }) {
+  const evening = addDays(wakeDate, -1);
+  const j = useJournal(evening);
+  const tags = useTags();
+  const kinds = new Map((tags.data ?? []).map((t) => [t.key, t]));
+  const evTags = (j.data?.tags ?? []).filter((k) => kinds.get(k)?.kind === "evening");
+  const note = j.data?.note ?? "";
+  if (!evTags.length && !note) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-xs text-muted">Evening before:</span>
+      {evTags.map((k) => (
+        <span key={k} className="rounded-full border border-line px-2.5 py-0.5 text-xs text-ink-2">
+          {kinds.get(k)?.label ?? k}
+        </span>
+      ))}
+      {note && <span className="truncate text-xs text-ink-2">“{note.split("\n")[0]}”</span>}
+    </div>
+  );
+}
 
 function StageTable({ s }: { s: SleepSession }) {
   const mins: Record<Stage, number | null | undefined> = {
@@ -118,6 +140,7 @@ export function SleepPage() {
         </div>
       ) : (
         <>
+          <EveningBefore wakeDate={n.date} />
           <section className="card reveal grid grid-cols-2 gap-4 p-4 sm:grid-cols-4" style={{ ["--i" as string]: 1 }}>
             <Stat label="Asleep" value={fmtDuration(s.minutes_asleep)} hint={`goal ${fmtDuration(n.goal_min)}`} />
             <Stat label="In bed" value={fmtDuration(s.minutes_in_bed)} hint={`${fmtTime(s.start)} → ${fmtTime(s.end)}`} />

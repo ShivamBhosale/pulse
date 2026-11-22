@@ -158,3 +158,34 @@ class Setting(Base):
     __tablename__ = "settings"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value_json: Mapped[str] = mapped_column(Text)
+
+
+# ---- journal: tags and notes you enter yourself (never touched by sync) ---------------------
+
+
+class Tag(Base):
+    __tablename__ = "tags"
+    key: Mapped[str] = mapped_column(String(48), primary_key=True)
+    label: Mapped[str] = mapped_column(String(48))
+    # evening: affects the following night (compared with next day's overnight metrics)
+    kind: Mapped[str] = mapped_column(String(16))
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    sort: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class DayTag(Base):
+    __tablename__ = "day_tags"
+    civil_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    tag_key: Mapped[str] = mapped_column(
+        String(48), ForeignKey("tags.key", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    __table_args__ = (Index("ix_day_tags_tag", "tag_key"),)
+
+
+class DayNote(Base):
+    __tablename__ = "day_notes"
+    civil_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    text: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime)

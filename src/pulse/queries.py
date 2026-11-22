@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
-from pulse import derived, prefs, summary
+from pulse import derived, journal, prefs, summary
 from pulse.api import schemas as S
 from pulse.datatypes import CivilWindow
 from pulse.metrics import CATALOG, Metric
@@ -24,6 +24,7 @@ from pulse.models import (
     SleepSession,
     SleepStage,
     SyncState,
+    Tag,
 )
 
 SLOT_MIN = 15
@@ -852,6 +853,11 @@ def day_facts(session: Session, d: date, now: datetime, zone: ZoneInfo) -> summa
     }
     recent = {d, d - timedelta(days=1)} if is_today else {d}
     units = prefs.get(session, "units")
+    before = journal.get_journal(session, d - timedelta(days=1)).tags
+    evening = {
+        t.key: t.label
+        for t in session.scalars(select(Tag).where(Tag.key.in_(before), Tag.kind == "evening"))
+    }
     return summary.DayFacts(
         date=d,
         is_today=is_today,
@@ -885,6 +891,7 @@ def day_facts(session: Session, d: date, now: datetime, zone: ZoneInfo) -> summa
             for b in rec.bests
             if b.key in _RECORD_LABELS and b.date in recent
         ),
+        evening_tags_before=tuple(evening[k] for k in before if k in evening),
     )
 
 
@@ -899,3 +906,60 @@ def summary_out(session: Session, d: date, now: datetime, zone: ZoneInfo) -> S.S
             for x in out.sentences
         ],
     )
+
+
+# ---- phase 4: tags ------------------------------------------------------------------------
+
+
+def tag_effect_out(
+    session: Session,
+    tag: Tag,
+    m: Metric,
+    start: date,
+    end_inclusive: date,
+    lag: int | None,
+    with_points: bool = True,
+) -> S.TagEffectOut:
+    lag_days = derived.default_lag(m.key, tag.kind) if lag is None else lag
+    values = daily_values(session, m.key, start, end_inclusive + timedelta(days=1))
+    exclude = journal.tag_days(session, journal.SICK_KEY) if tag.key != journal.SICK_KEY else set()
+    tagged, untagged = derived.split_by_tag(
+        values, journal.tag_days(session, tag.key), lag_days, exclude
+    )
+    e = derived.tag_effect(list(tagged.values()), list(untagged.values()))
+
+    def pts(x: dict[date, float]) -> list[S.DayValue]:
+        return [S.DayValue(date=d, value=v) for d, v in sorted(x.items())] if with_points else []
+
+    return S.TagEffectOut(
+        tag=tag.key,
+        tag_label=tag.label,
+        metric=m.key,
+        metric_label=m.label,
+        unit=m.unit,
+        lag=lag_days,
+        start=start,
+        end=end_inclusive,
+        n_tagged=e.n_tagged,
+        n_untagged=e.n_untagged,
+        median_tagged=e.median_tagged,
+        median_untagged=e.median_untagged,
+        mean_tagged=e.mean_tagged,
+        mean_untagged=e.mean_untagged,
+        diff=e.diff,
+        diff_in_iqr=e.diff_in_iqr,
+        p=e.p,
+        verdict=e.verdict,
+        verdict_text=derived.VERDICT_TEXT[e.verdict],
+        tagged=pts(tagged),
+        untagged=pts(untagged),
+    )
+
+
+def tag_effects(session: Session, m: Metric, start: date, end_inclusive: date) -> S.TagEffects:
+    tags = session.scalars(select(Tag).where(Tag.archived.is_(False)).order_by(Tag.sort))
+    effects = [
+        tag_effect_out(session, t, m, start, end_inclusive, None, with_points=False) for t in tags
+    ]
+    effects.sort(key=lambda e: (e.verdict == "too_few", -abs(e.diff_in_iqr or 0.0), e.tag_label))
+    return S.TagEffects(metric=m.key, start=start, end=end_inclusive, effects=effects)

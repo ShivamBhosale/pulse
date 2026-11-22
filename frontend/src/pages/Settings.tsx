@@ -1,12 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { api, type Settings } from "../api/client";
-import { useSettings, useStatus, useUpdateSettings } from "../api/hooks";
+import { useSettings, useStatus, useTagMutations, useTags, useUpdateSettings } from "../api/hooks";
+import type { TagInfo } from "../api/client";
 import { Card, ErrorNote } from "../components/ui";
 import { addDays, fmtAgo, fmtDuration, fmtNum, isoDate } from "../lib/format";
 import { useTheme } from "../lib/theme";
 
 const input = "num w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm text-ink";
+const textInput = "w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm text-ink";
 const btn = "rounded-lg border border-line px-3 py-1.5 text-sm text-ink-2 transition-colors hover:text-ink disabled:opacity-50";
 const primary = "rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-[var(--page)] disabled:opacity-50";
 
@@ -247,6 +249,84 @@ function ConnectionCard() {
   );
 }
 
+function TagRow({ t }: { t: TagInfo }) {
+  const { update } = useTagMutations();
+  const [label, setLabel] = useState(t.label);
+  const changed = label.trim() !== t.label && label.trim().length > 0;
+  return (
+    <li className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] ${t.archived ? "opacity-60" : ""}`}>
+      <form
+        className="flex min-w-0 items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (changed) update.mutate({ key: t.key, patch: { label: label.trim() } });
+        }}
+      >
+        <input className={`${textInput} min-w-0`} value={label} maxLength={40} onChange={(e) => setLabel(e.target.value)} aria-label={`Rename ${t.label}`} />
+        {changed && <button className={btn}>Rename</button>}
+      </form>
+      <span className="num text-right text-xs text-muted">
+        {t.uses} day{t.uses === 1 ? "" : "s"}
+      </span>
+      <select
+        className="rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink"
+        value={t.kind}
+        onChange={(e) => update.mutate({ key: t.key, patch: { kind: e.target.value as TagInfo["kind"] } })}
+        aria-label={`When ${t.label} applies`}
+      >
+        <option value="evening">Evening → next night</option>
+        <option value="day">Day</option>
+      </select>
+      <button type="button" className={btn} onClick={() => update.mutate({ key: t.key, patch: { archived: !t.archived } })}>
+        {t.archived ? "Restore" : "Archive"}
+      </button>
+    </li>
+  );
+}
+
+function TagsCard() {
+  const tags = useTags();
+  const { create } = useTagMutations();
+  const [label, setLabel] = useState("");
+  const [kind, setKind] = useState<TagInfo["kind"]>("day");
+  const [showArchived, setShowArchived] = useState(false);
+  const list = (tags.data ?? []).filter((t) => showArchived || !t.archived);
+  const archivedCount = (tags.data ?? []).filter((t) => t.archived).length;
+  return (
+    <Card index={7} title="Tags" subtitle="Evening tags are compared with the night that follows. Archiving hides a tag but keeps its history.">
+      <form
+        className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (label.trim()) create.mutate({ label: label.trim(), kind }, { onSuccess: () => setLabel("") });
+        }}
+      >
+        <input className={textInput} placeholder="New tag, e.g. Sauna" value={label} maxLength={40} onChange={(e) => setLabel(e.target.value)} aria-label="New tag name" />
+        <select className={input} value={kind} onChange={(e) => setKind(e.target.value as TagInfo["kind"])} aria-label="New tag kind">
+          <option value="day">Day</option>
+          <option value="evening">Evening → next night</option>
+        </select>
+        <button className={primary} disabled={!label.trim() || create.isPending}>Add tag</button>
+      </form>
+      <Result m={create} />
+      {!tags.data ? (
+        <div className="h-24 animate-pulse rounded-lg bg-surface-2/60" />
+      ) : (
+        <ul className="divide-y divide-line">
+          {list.map((t) => (
+            <TagRow key={`${t.key}-${t.label}`} t={t} />
+          ))}
+        </ul>
+      )}
+      {archivedCount > 0 && (
+        <button type="button" className="mt-2 text-xs text-muted underline decoration-dotted underline-offset-2 hover:text-ink" onClick={() => setShowArchived((x) => !x)}>
+          {showArchived ? "Hide archived" : `Show ${archivedCount} archived`}
+        </button>
+      )}
+    </Card>
+  );
+}
+
 function fmtBytes(n: number): string {
   return n >= 1e9 ? `${fmtNum(n / 1e9, 1)} GB` : `${fmtNum(n / 1e6, 1)} MB`;
 }
@@ -318,6 +398,7 @@ export function SettingsPage() {
         <ConnectionCard />
         <BackupCard />
       </div>
+      <TagsCard />
     </div>
   );
 }

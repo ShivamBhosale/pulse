@@ -27,6 +27,11 @@ export type ReadinessComponent = Schemas["ReadinessComponent"];
 export type Granularity = Schemas["MetricSeries"]["granularity"];
 export type Summary = Schemas["Summary"];
 export type BackupStatus = Schemas["BackupStatus"];
+export type TagInfo = Schemas["TagOut"];
+export type Journal = Schemas["Journal"];
+export type JournalRange = Schemas["JournalRange"];
+export type TagEffect = Schemas["TagEffectOut"];
+export type TagEffects = Schemas["TagEffects"];
 
 export class Locked extends Error {
   constructor() {
@@ -91,6 +96,19 @@ export const api = {
   records: () => request<Records>("/api/v1/records"),
   summary: (date: string) => request<Summary>(`/api/v1/summary${qs({ date })}`),
   backup: () => request<{ job: string }>("/api/v1/backup", { method: "POST" }),
+  tags: () => request<TagInfo[]>("/api/v1/tags"),
+  createTag: (label: string, kind: TagInfo["kind"]) =>
+    request<TagInfo>("/api/v1/tags", { method: "POST", body: JSON.stringify({ label, kind }) }),
+  updateTag: (key: string, patch: Partial<Pick<TagInfo, "label" | "kind" | "archived">>) =>
+    request<TagInfo>(`/api/v1/tags/${encodeURIComponent(key)}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  journal: (date: string) => request<Journal>(`/api/v1/journal/${date}`),
+  putJournal: (date: string, tags: string[], note: string) =>
+    request<Journal>(`/api/v1/journal/${date}`, { method: "PUT", body: JSON.stringify({ tags, note }) }),
+  journalRange: (from: string, to: string) => request<JournalRange>(`/api/v1/journal${qs({ from, to })}`),
+  tagEffect: (tag: string, metric: string, from: string, to: string, lag: "auto" | "0" | "1") =>
+    request<TagEffect>(`/api/v1/explore/tag-effect${qs({ tag, metric, from, to, lag })}`),
+  tagEffects: (metric: string, from: string, to: string) =>
+    request<TagEffects>(`/api/v1/explore/tag-effects${qs({ metric, from, to })}`),
   settings: () => request<Settings>("/api/v1/settings"),
   updateSettings: (body: SettingsIn) =>
     request<Settings>("/api/v1/settings", { method: "PUT", body: JSON.stringify(body) }),

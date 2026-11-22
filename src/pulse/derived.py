@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import math
+import random
 import statistics
 from collections.abc import Mapping, Sequence
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Literal
@@ -394,3 +396,151 @@ def time_in_zones(bpms: Sequence[float], bounds: Mapping[str, tuple[int, int]]) 
         zone = next((z for z, (lo, _) in ordered if bpm >= lo), "below")
         out[zone] += 1
     return out
+
+
+# ---- tags: tagged vs untagged days --------------------------------------------------------
+
+# Metrics that belong to the night ending on the civil day (wake date).
+OVERNIGHT_METRICS = frozenset(
+    {
+        "sleep_min",
+        "sleep_main_min",
+        "sleep_in_bed_min",
+        "sleep_efficiency",
+        "sleep_deep_min",
+        "sleep_light_min",
+        "sleep_rem_min",
+        "sleep_awake_min",
+        "bedtime_min",
+        "waketime_min",
+        "hrv_rmssd",
+        "hrv_deep_rmssd",
+        "nonrem_hr",
+        "resting_hr",
+        "spo2_avg",
+        "spo2_low",
+        "spo2_high",
+        "skin_temp_delta",
+        "skin_temp_nightly",
+        "readiness",
+    }
+)
+PERMUTATIONS = 5000
+PERMUTATION_SEED = 20261122
+MIN_TAGGED = 3
+
+
+def default_lag(metric: str, tag_kind: str) -> int:
+    """An evening tag (alcohol on Tuesday) shows up in the next wake day's overnight metrics."""
+    return 1 if tag_kind == "evening" and metric in OVERNIGHT_METRICS else 0
+
+
+def split_by_tag(
+    values: Series,
+    tag_days: AbstractSet[date],
+    lag: int,
+    exclude_days: AbstractSet[date] = frozenset(),
+) -> tuple[dict[date, float], dict[date, float]]:
+    """(tagged, untagged) metric values. Tag day d affects metric day d + lag; days affected
+    by ``exclude_days`` (e.g. Sick) are kept out of the untagged comparison group."""
+    shift = timedelta(days=lag)
+    affected = {d + shift for d in tag_days}
+    excluded = {d + shift for d in exclude_days}
+    tagged = {d: v for d, v in values.items() if d in affected}
+    untagged = {d: v for d, v in values.items() if d not in affected and d not in excluded}
+    return tagged, untagged
+
+
+def permutation_p(
+    a: Sequence[float], b: Sequence[float], n: int = PERMUTATIONS, seed: int = PERMUTATION_SEED
+) -> float | None:
+    """Two-sided permutation test on the difference in means (deterministic: fixed seed).
+    Samples the smaller group's size each round, so it's cheap even for years of days."""
+    if len(a) < 2 or len(b) < 2:
+        return None
+    rng = random.Random(seed)  # noqa: S311 - statistics, not security
+    pool = list(a) + list(b)
+    total, k = sum(pool), min(len(a), len(b))
+    n_all = len(pool)
+    small_is_a = len(a) <= len(b)
+
+    def diff_from_small_sum(s: float) -> float:
+        rest = total - s
+        if small_is_a:
+            return s / k - rest / (n_all - k)
+        return rest / (n_all - k) - s / k
+
+    observed = abs(sum(a) / len(a) - sum(b) / len(b))
+    hits = 0
+    eps = 1e-12 * max(1.0, observed)
+    for _ in range(n):
+        if abs(diff_from_small_sum(sum(rng.sample(pool, k)))) >= observed - eps:
+            hits += 1
+    return (hits + 1) / (n + 1)
+
+
+Verdict = Literal["clear", "possible", "none", "too_few"]
+VERDICT_TEXT: dict[str, str] = {
+    "clear": "Clear difference",
+    "possible": "Possible difference",
+    "none": "No clear difference",
+    "too_few": "Not enough tagged days",
+}
+
+
+@dataclass(frozen=True)
+class TagEffect:
+    n_tagged: int
+    n_untagged: int
+    median_tagged: float | None
+    median_untagged: float | None
+    mean_tagged: float | None
+    mean_untagged: float | None
+    diff: float | None  # median tagged - median untagged
+    diff_in_iqr: float | None  # diff / IQR of untagged days (how big, relative to you)
+    p: float | None
+    verdict: Verdict
+
+
+def tag_effect(tagged: Sequence[float], untagged: Sequence[float]) -> TagEffect:
+    nt, nu = len(tagged), len(untagged)
+    med_t = statistics.median(tagged) if tagged else None
+    med_u = statistics.median(untagged) if untagged else None
+    diff = med_t - med_u if med_t is not None and med_u is not None else None
+    iqr = None
+    if nu >= 4:
+        q1, _, q3 = statistics.quantiles(untagged, n=4, method="inclusive")
+        iqr = q3 - q1
+    if nt < MIN_TAGGED or nu < MIN_TAGGED:
+        return TagEffect(
+            nt,
+            nu,
+            med_t,
+            med_u,
+            statistics.fmean(tagged) if tagged else None,
+            statistics.fmean(untagged) if untagged else None,
+            diff,
+            diff / iqr if diff is not None and iqr else None,
+            None,
+            "too_few",
+        )
+    p = permutation_p(tagged, untagged)
+    verdict: Verdict = (
+        "clear"
+        if p is not None and p < 0.05 and nt >= 5
+        else "possible"
+        if p is not None and p < 0.2
+        else "none"
+    )
+    return TagEffect(
+        nt,
+        nu,
+        med_t,
+        med_u,
+        statistics.fmean(tagged),
+        statistics.fmean(untagged),
+        diff,
+        diff / iqr if diff is not None and iqr else None,
+        None if p is None else round(p, 4),
+        verdict,
+    )

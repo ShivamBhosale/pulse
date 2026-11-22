@@ -22,10 +22,13 @@ interface Props {
   height?: number;
   /** override the granularity (e.g. weekly AZM always by week) */
   granularity?: Span["granularity"];
+  markers?: string[];
+  markerLabel?: string;
+  annotations?: Record<string, string>;
 }
 
 /** A single metric over the page's range, with the period average as the headline. */
-export function MetricCard({ metric, title, span, kind = "line", baseline, goal, goalLabel, diverging, subtitle, index = 0, height = 220, granularity }: Props) {
+export function MetricCard({ metric, title, span, kind = "line", baseline, goal, goalLabel, diverging, subtitle, index = 0, height = 220, granularity, markers, markerLabel, annotations }: Props) {
   const g = granularity ?? span.granularity;
   const wantBand = Boolean(baseline) && g === "day";
   const q = useMetric(metric, span.from, span.to, g, wantBand);
@@ -36,8 +39,11 @@ export function MetricCard({ metric, title, span, kind = "line", baseline, goal,
     [q.data],
   );
   const option = useMemo(
-    () => (q.data ? trendOption(q.data, { kind, units, goal, goalLabel, band, bandLabel: "usual range (28-day IQR)", diverging }, p) : null),
-    [q.data, kind, units, goal, goalLabel, band, diverging, p],
+    () =>
+      q.data
+        ? trendOption(q.data, { kind, units, goal, goalLabel, band, bandLabel: "usual range (28-day IQR)", diverging, markers, markerLabel, annotations }, p)
+        : null,
+    [q.data, kind, units, goal, goalLabel, band, diverging, markers, markerLabel, annotations, p],
   );
   const s = q.data;
   const headline = s?.summary.avg != null ? (

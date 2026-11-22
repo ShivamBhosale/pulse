@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { api, type Granularity, type SettingsIn } from "./client";
+import { api, type Granularity, type Journal, type SettingsIn, type TagInfo } from "./client";
 
 export const useToday = () =>
   useQuery({ queryKey: ["today"], queryFn: api.today, refetchInterval: 5 * 60_000 });
@@ -48,6 +48,56 @@ export const useExercise = (id: string | null) =>
 
 export const useSummary = (date: string, enabled = true) =>
   useQuery({ queryKey: ["summary", date], queryFn: () => api.summary(date), enabled });
+
+export const useTags = () => useQuery({ queryKey: ["tags"], queryFn: api.tags, staleTime: 5 * 60_000 });
+
+export const useJournal = (date: string) =>
+  useQuery({ queryKey: ["journal", date], queryFn: () => api.journal(date) });
+
+export const useJournalRange = (from: string, to: string, enabled = true) =>
+  useQuery({ queryKey: ["journal-range", from, to], queryFn: () => api.journalRange(from, to), enabled });
+
+/** Save a day's tags + note optimistically; roll back if the server refuses. */
+export function useSaveJournal(date: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (j: Pick<Journal, "tags" | "note">) => api.putJournal(date, j.tags, j.note),
+    onMutate: async (j) => {
+      await qc.cancelQueries({ queryKey: ["journal", date] });
+      const prev = qc.getQueryData<Journal>(["journal", date]);
+      qc.setQueryData<Journal>(["journal", date], { date, ...j });
+      return { prev };
+    },
+    onError: (_e, _j, ctx) => ctx?.prev && qc.setQueryData(["journal", date], ctx.prev),
+    onSuccess: (data) => {
+      qc.setQueryData(["journal", date], data);
+      for (const k of ["tags", "journal-range", "tag-effect", "tag-effects", "summary", "today"])
+        void qc.invalidateQueries({ queryKey: [k] });
+    },
+  });
+}
+
+export function useTagMutations() {
+  const qc = useQueryClient();
+  const done = { onSuccess: () => void qc.invalidateQueries({ queryKey: ["tags"] }) };
+  return {
+    create: useMutation({ mutationFn: (t: { label: string; kind: TagInfo["kind"] }) => api.createTag(t.label, t.kind), ...done }),
+    update: useMutation({
+      mutationFn: (t: { key: string; patch: Partial<Pick<TagInfo, "label" | "kind" | "archived">> }) => api.updateTag(t.key, t.patch),
+      ...done,
+    }),
+  };
+}
+
+export const useTagEffect = (tag: string, metric: string, from: string, to: string, lag: "auto" | "0" | "1", enabled = true) =>
+  useQuery({
+    queryKey: ["tag-effect", tag, metric, from, to, lag],
+    queryFn: () => api.tagEffect(tag, metric, from, to, lag),
+    enabled: enabled && Boolean(tag && metric),
+  });
+
+export const useTagEffects = (metric: string, from: string, to: string) =>
+  useQuery({ queryKey: ["tag-effects", metric, from, to], queryFn: () => api.tagEffects(metric, from, to), enabled: Boolean(metric) });
 
 export const useRecords = () => useQuery({ queryKey: ["records"], queryFn: api.records });
 
