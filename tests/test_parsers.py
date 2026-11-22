@@ -264,3 +264,10 @@ def test_nan_values_are_treated_as_missing():
     b2 = P.Batch()
     b2.daily(date(2026, 1, 1), "x", float("nan"), "u")
     assert b2.count("daily_metrics") == 0
+
+
+def test_zero_physiological_values_are_missing() -> None:
+    from pulse.sync.parsers import pos
+
+    assert pos("0") is None and pos(0) is None and pos("NaN") is None
+    assert pos("61") == 61.0

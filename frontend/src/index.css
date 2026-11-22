@@ -39,6 +39,25 @@
   --zone-3: rgb(157 140 255 / 0.14);
   --glow: rgb(157 140 255 / 0.1);
   --noise-opacity: 0.05;
+  /* HR zones, ordinal one-hue ramp (validated --ordinal vs #14171c): light → peak */
+  --hrz-light: #5b4bb8;
+  --hrz-moderate: #7a68e0;
+  --hrz-vigorous: #9d8cff;
+  --hrz-peak: #c9bfff;
+  --hrz-below: #3a404a;
+  /* sequential magnitude ramp (heatmaps): near-zero recedes into the surface */
+  --seq-0: #1d2029;
+  --seq-1: #4b3f99;
+  --seq-2: #9d8cff;
+  --seq-3: #ddd6ff;
+  /* diverging pair, gray midpoint */
+  --div-cool: #3987e5;
+  --div-mid: #383835;
+  --div-warm: #d95926;
+  --neutral-series: #6b717c;
+  /* calories stack: validated categorical pair (dark) */
+  --cal-rest: #199e70;
+  --cal-active: #8a78f0;
 }
 
 [data-theme="light"] {
@@ -71,6 +90,21 @@
   --zone-3: rgb(91 71 214 / 0.11);
   --glow: rgb(91 71 214 / 0.07);
   --noise-opacity: 0.035;
+  --hrz-light: #a99cf5;
+  --hrz-moderate: #7f6ce8;
+  --hrz-vigorous: #5b47d6;
+  --hrz-peak: #3a2a9e;
+  --hrz-below: #c3c2b7;
+  --seq-0: #eeedf3;
+  --seq-1: #a99cf5;
+  --seq-2: #5b47d6;
+  --seq-3: #2a1d7a;
+  --div-cool: #2a78d6;
+  --div-mid: #f0efec;
+  --div-warm: #eb6834;
+  --neutral-series: #a3a29b;
+  --cal-rest: #199e70;
+  --cal-active: #5b47d6;
 }
 
 @theme inline {

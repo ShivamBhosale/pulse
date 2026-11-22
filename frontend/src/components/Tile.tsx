@@ -1,5 +1,6 @@
 import type { Tile as TileData } from "../api/client";
 import { fmtDuration, fmtNum, signed } from "../lib/format";
+import { ReadinessBreakdown } from "./Readiness";
 import { Sparkline } from "./Sparkline";
 
 type Tone = { label: string; icon: string; color: string } | null;
@@ -29,6 +30,8 @@ function display(t: TileData): { value: string; unit: string } {
       return { value: fmtNum(t.value), unit: "min" };
     case "steps":
       return { value: fmtNum(t.value), unit: "" };
+    case "readiness":
+      return { value: fmtNum(t.value), unit: "/ 100" };
     default:
       return { value: fmtNum(t.value), unit: t.unit };
   }
@@ -75,6 +78,7 @@ export function Tile({ tile, index }: { tile: TileData; index: number }) {
         </div>
         <Sparkline points={tile.spark} band={tile.key === "steps" || tile.key === "azm" ? null : tile.baseline} />
       </div>
+      {tile.key === "readiness" && tile.components && <ReadinessBreakdown tile={tile} />}
       {goalPct != null && (
         <div className="h-[3px] overflow-hidden rounded-full bg-surface-2" aria-label={`${Math.round(goalPct * 100)}% of goal`}>
           <div className="h-full rounded-full bg-accent" style={{ width: `${goalPct * 100}%` }} />

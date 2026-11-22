@@ -55,3 +55,8 @@ export function addDays(iso: string, n: number): string {
   d.setDate(d.getDate() + n);
   return isoDate(d);
 }
+
+/** "Strength training" from STRENGTH_TRAINING unless the workout has its own name. */
+export function exerciseName(e: { name?: string | null; exercise_type: string }): string {
+  return e.name ?? e.exercise_type.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+}

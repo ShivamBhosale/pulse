@@ -4,8 +4,8 @@ Pulse is a self-hosted, single-user dashboard for your Fitbit data, read from th
 **Google Health API v4**. It runs on your own server at no cost. It uses no cloud hosting and
 no AI calls, and your health data stays on the server.
 
-> **Status: Phase 1 — sync pipeline, API, Today and Sleep pages (installable PWA).**
-> Phase 2 (full dashboard, readiness, records) is next.
+> **Status: Phase 2 — full dashboard.**
+> Pages: Today, Sleep, Heart & recovery, Activity (with workout detail), Trends & explore, Records & streaks and Settings. It is an installable PWA, and readiness is a personal heuristic.
 
 ## Quick start
 
@@ -60,7 +60,7 @@ Google Health API v4 ──(httpx, throttled, backoff)──► sync streams ─
   | `daily_rollups_14` | HR, total kcal, kcal per zone, active minutes | 14 days |
   | `daily_lists` | resting HR, HRV, SpO2, skin temperature, zone bounds | 90 days |
   | `hr_minute` | 1-minute heart-rate rollup | 7 days |
-  | `steps_15m` | 15-minute step rollup | 90 days |
+  | `steps_15m` | 15-minute step rollup | 60 days (DST-safe under the 90-day physical limit) |
   | `intraday_lists` | AZM, SpO2/HRV samples, sedentary periods, exercises | 30 days |
   | `sleep` | sleep sessions, via reconcile | 30 days |
 
@@ -69,12 +69,47 @@ Google Health API v4 ──(httpx, throttled, backoff)──► sync streams ─
 - **`sync_state`** records per stream: high-water mark, last success, last error, and the backfill cursor. Token-refresh failures land in the `_auth` row. `/api/v1/status` reports them, and the UI shows a reconnect banner.
 - **Errors.** 429 and 5xx responses are retried with jittered exponential backoff that respects `Retry-After`. Logs are JSON lines in `data/logs/pulse.log` (`jq . data/logs/pulse.log`), with tokens redacted.
 
+### Derived metrics (Phase 2)
+`src/pulse/derived.py` is pure and unit-tested. `src/pulse/derive.py` recomputes **all history** after every sync, backfill or re-sync, and whenever you save goals or readiness weights. That takes about 100 ms for two years of data. Results are stored as ordinary rows in `daily_metrics`, so the charts, Explore, the year calendar and the records all treat them like any other metric. Sync streams never touch these keys.
+
+| Key | Definition |
+|---|---|
+| `readiness` | 0–100. A weighted mean of four parts; default weights are HRV 35, RHR 25, Sleep 25, Strain 15, editable in Settings. **HRV** and **resting HR** (inverted) score 50 at your 28-day median, excluding today, and reach 0 or 100 at 1.5 × IQR away; the spread has a floor of 5% of the median. **Sleep** is last night's main sleep ÷ goal, capped at 100. **Strain** is yesterday's AZM compared with its own 28-day median, inverted and capped at 70, so rest days don't inflate the score. Missing parts are dropped and the remaining weights rescaled. A score needs at least two parts, one of them HRV or sleep. It is a personal heuristic, **not a medical measure**, and the UI shows the formula. |
+| `strain` | Daily AZM-weighted minutes. Fitbit already counts cardio and peak minutes double. |
+| `load_ratio` | Mean strain over 7 days ÷ mean strain over 28 days. Needs 21 days of history. |
+| `sleep_debt_min` | Σ max(0, goal − main sleep) over the last 7 nights. Missing nights are skipped. |
+| `bedtime_sd_min`, `waketime_sd_min` | Standard deviation over 14 days, needing at least 5 nights. Times are wrapped onto a −6h…18h scale around midnight, so 23:30 and 00:30 count as an hour apart. |
+| `azm_week` | AZM total from Monday up to that day, compared against the weekly goal. |
+| `calories_bmr` | Total calories minus active calories. The band reports no BMR, so this is labelled "Resting (est.)". |
+| `sedentary_longest_min` | Longest single sedentary period of the day (SQL over the raw intervals). |
+
+**Records** are computed on request from SQL series. Personal bests use the earliest day on ties. The lowest resting HR uses a 7-day mean, so a single bad reading can't set it.
+
+**Streaks** count steps and sleep per day, and AZM per week. Today and the current week are in progress: they extend a streak but never break it. A day with no data breaks a streak.
+
+### API (`/api/v1`, OpenAPI at `/api/v1/openapi.json`)
+| Endpoint | Purpose |
+|---|---|
+| `GET /today`, `/status`, `/sleep`, `/sleep/trend`, `/intraday/heart-rate` | Phase 1 views |
+| `GET /metrics/{m}?from&to&granularity&band` | One metric (day, week or month, aggregated in SQL). `band=true` adds the rolling 28-day median and IQR. |
+| `GET /series?metrics=a&metrics=b…` | Several metrics in one request (stacked charts) |
+| `GET /metrics/{m}/weekday` | Averages by day of week |
+| `GET /explore/correlate?a&b` | Paired daily values, Pearson r, n and a strength label |
+| `GET /activity/heatmap` | Average steps by hour of day × weekday (DST-aware) |
+| `GET /exercises`, `/exercises/{id}` | Workouts. Detail includes the HR curve and time in each zone. |
+| `GET /records` | Personal bests and streaks |
+| `GET/PUT /settings`, `PUT /settings/passcode` | Goals, units, readiness weights and passcode |
+| `POST /sync`, `/backfill`, `/resync` | Start background jobs. Returns 409 while another job runs. |
+
+Pages hide any metric your device has never reported, using `/status.metrics`. On a Fitbit Air that means floors, VO2 max and weight.
+
 ### Code map
 ```
 src/pulse/
   sync/{planner,parsers,streams,writer,engine}.py   pipeline (pure parsers + planner, unit-tested)
   models.py, db.py, migrations/                     schema (SQLAlchemy 2 + Alembic, auto-migrates at start)
-  queries.py, derived.py, metrics.py                read side: baselines (28-day median/IQR), catalog
+  queries.py, metrics.py                            read side (SQL aggregation), metric catalog
+  derived.py, derive.py                             derived metrics: pure maths + recompute job
   api/{app,routes,schemas}.py                       FastAPI, passcode gate, SPA serving, OpenAPI
   scheduler.py, security.py, prefs.py, cli.py
 frontend/                                           Vite + React + TS, TanStack Query, Tailwind, ECharts, PWA

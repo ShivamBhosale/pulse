@@ -6,10 +6,10 @@ import type { IntradayHeartRate, SleepSession, SleepTrendNight, StepsCurve } fro
 import { fmtClock, fmtDay, fmtDuration, fmtNum, fmtTime } from "../lib/format";
 import type { Palette } from "../lib/theme";
 
-const FONT = "IBM Plex Sans, system-ui, sans-serif";
-const MONO = "IBM Plex Mono, ui-monospace, monospace";
+export const FONT = "IBM Plex Sans, system-ui, sans-serif";
+export const MONO = "IBM Plex Mono, ui-monospace, monospace";
 
-function base(p: Palette): EChartsCoreOption {
+export function base(p: Palette): EChartsCoreOption {
   return {
     animationDuration: 500,
     textStyle: { fontFamily: FONT, color: p.ink2, fontSize: 11 },
@@ -24,20 +24,20 @@ function base(p: Palette): EChartsCoreOption {
   };
 }
 
-const axisCommon = (p: Palette) => ({
+export const axisCommon = (p: Palette) => ({
   axisLine: { lineStyle: { color: p.axis } },
   axisTick: { show: false },
   axisLabel: { color: p.muted, fontFamily: MONO, fontSize: 10 },
   splitLine: { lineStyle: { color: p.grid, width: 1 } },
 });
 
-const row = (swatch: string, label: string, value: string) =>
+export const row = (swatch: string, label: string, value: string) =>
   `<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;min-width:150px">` +
   `<span style="display:inline-flex;gap:6px;align-items:center">` +
   `<span style="width:8px;height:8px;border-radius:2px;background:${swatch}"></span>${label}</span>` +
   `<b style="font-family:${MONO};font-weight:500">${value}</b></div>`;
 
-const ZONE_LABEL: Record<string, string> = { moderate: "Moderate", vigorous: "Vigorous", peak: "Peak", light: "Light" };
+export const ZONE_LABEL: Record<string, string> = { below: "Below zones", light: "Light", moderate: "Fat burn", vigorous: "Cardio", peak: "Peak" };
 
 // ---- intraday heart rate ------------------------------------------------------------------
 

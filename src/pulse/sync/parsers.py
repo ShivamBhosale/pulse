@@ -48,6 +48,13 @@ def num(value: Any) -> float | None:
     return v if math.isfinite(v) else None
 
 
+def pos(value: Any) -> float | None:
+    """Physiological readings (bpm, ms, %): the API sends 0 when there was no measurement
+    (e.g. a night the band missed), which must not count as a real value."""
+    v = num(value)
+    return v if v is not None and v > 0 else None
+
+
 def inum(value: Any) -> int | None:
     v = num(value)
     return None if v is None else round(v)
@@ -283,20 +290,20 @@ def parse_daily_list(
         b.add("raw_points", raw_row(data_type, p, v, d, fetched_at))
         match data_type:
             case "daily-resting-heart-rate":
-                b.daily(d, "resting_hr", num(v.get("beatsPerMinute")), "bpm")
+                b.daily(d, "resting_hr", pos(v.get("beatsPerMinute")), "bpm")
             case "daily-heart-rate-variability":
-                b.daily(d, "hrv_rmssd", num(v.get("averageHeartRateVariabilityMilliseconds")), "ms")
+                b.daily(d, "hrv_rmssd", pos(v.get("averageHeartRateVariabilityMilliseconds")), "ms")
                 b.daily(
                     d,
                     "hrv_deep_rmssd",
-                    num(v.get("deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds")),
+                    pos(v.get("deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds")),
                     "ms",
                 )
-                b.daily(d, "nonrem_hr", num(v.get("nonRemHeartRateBeatsPerMinute")), "bpm")
+                b.daily(d, "nonrem_hr", pos(v.get("nonRemHeartRateBeatsPerMinute")), "bpm")
             case "daily-oxygen-saturation":
-                b.daily(d, "spo2_avg", num(v.get("averagePercentage")), "%")
-                b.daily(d, "spo2_low", num(v.get("lowerBoundPercentage")), "%")
-                b.daily(d, "spo2_high", num(v.get("upperBoundPercentage")), "%")
+                b.daily(d, "spo2_avg", pos(v.get("averagePercentage")), "%")
+                b.daily(d, "spo2_low", pos(v.get("lowerBoundPercentage")), "%")
+                b.daily(d, "spo2_high", pos(v.get("upperBoundPercentage")), "%")
             case "daily-sleep-temperature-derivations":
                 nightly = num(v.get("nightlyTemperatureCelsius"))
                 base = num(v.get("baselineTemperatureCelsius"))

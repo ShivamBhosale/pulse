@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { useState, type ReactNode } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { useRefresh } from "../api/hooks";
 import { fmtAgo } from "../lib/format";
 import { useTheme } from "../lib/theme";
@@ -7,7 +7,14 @@ import { useTheme } from "../lib/theme";
 const NAV = [
   { to: "/", label: "Today", icon: "M3 12h4l3-8 4 16 3-8h4" },
   { to: "/sleep", label: "Sleep", icon: "M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" },
+  { to: "/heart", label: "Heart", icon: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" },
+  { to: "/activity", label: "Activity", icon: "M13 4a1.5 1.5 0 1 0 0 .01M9 20l3-6 3 2v5M7 12l3-3 4 1 3 3" },
+  { to: "/trends", label: "Trends", icon: "M4 19V5M4 19h16M8 15l3-4 3 2 5-6" },
+  { to: "/records", label: "Records", icon: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4ZM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" },
+  { to: "/settings", label: "Settings", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2L10 21h4l.6-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z" },
 ];
+const PRIMARY = NAV.slice(0, 4);
+const MORE = NAV.slice(4);
 
 function Icon({ d }: { d: string }) {
   return (
@@ -32,6 +39,45 @@ function ReconnectBanner({ error }: { error: string | null | undefined }) {
   );
 }
 
+function MobileNav() {
+  const loc = useLocation();
+  // Close the sheet whenever the route changes (keyed on pathname, no effect needed).
+  const [openAt, setOpenAt] = useState<string | null>(null);
+  const open = openAt === loc.pathname;
+  const close = () => setOpenAt(null);
+  const moreActive = MORE.some((n) => loc.pathname.startsWith(n.to));
+  const item = (active: boolean) => `flex flex-col items-center gap-0.5 px-3 text-[11px] ${active ? "text-accent-ink" : "text-muted"}`;
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 z-20 md:hidden" onClick={close}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div id="more-sheet" role="dialog" aria-label="More pages" className="card absolute inset-x-3 bottom-[calc(max(env(safe-area-inset-bottom),8px)+64px)] p-2" onClick={(e) => e.stopPropagation()}>
+            {MORE.map((n) => (
+              <NavLink key={n.to} to={n.to} onClick={close} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-3 text-sm ${isActive ? "bg-surface-2 text-ink" : "text-ink-2"}`}>
+                <Icon d={n.icon} />
+                {n.label}
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      )}
+      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-line bg-surface/90 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 backdrop-blur md:hidden">
+        {PRIMARY.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.to === "/"} className={({ isActive }) => item(isActive)}>
+            <Icon d={n.icon} />
+            {n.label}
+          </NavLink>
+        ))}
+        <button type="button" className={item(moreActive || open)} aria-expanded={open} aria-controls="more-sheet" onClick={() => setOpenAt(open ? null : loc.pathname)}>
+          <Icon d="M5 12h.01M12 12h.01M19 12h.01" />
+          More
+        </button>
+      </nav>
+    </>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggle } = useTheme();
   const { refresh, syncing, status } = useRefresh();
@@ -51,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavLink
               key={n.to}
               to={n.to}
-              end
+              end={n.to === "/"}
               className={({ isActive }) =>
                 `rounded-lg px-3 py-1.5 text-sm transition-colors ${isActive ? "bg-surface-2 text-ink" : "text-muted hover:text-ink"}`
               }
@@ -83,22 +129,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
       {status && !status.auth.ok && <ReconnectBanner error={status.auth.error} />}
       <main>{children}</main>
-      <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-line bg-surface/90 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 backdrop-blur md:hidden"
-      >
-        {NAV.map((n) => (
-          <NavLink
-            key={n.to}
-            to={n.to}
-            end
-            className={({ isActive }) => `flex flex-col items-center gap-0.5 px-6 text-[11px] ${isActive ? "text-accent-ink" : "text-muted"}`}
-          >
-            <Icon d={n.icon} />
-            {n.label}
-          </NavLink>
-        ))}
-      </nav>
+      <MobileNav />
     </div>
   );
 }
