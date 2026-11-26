@@ -67,29 +67,54 @@ class LocalSync(
      * History import, newest first in 30-day chunks, resumable via the kv cursor. Stops after
      * 90 days with no steps at all (or 5 years back).
      */
-    suspend fun importHistory(progress: (LocalDate, Int) -> Unit = { _, _ -> }): Int =
-        lock.withLock {
-            var cursor = db.kv().get("import_cursor")?.let { LocalDate.parse(it) } ?: today().plusDays(1)
-            val limit = today().minusYears(MAX_IMPORT_YEARS)
-            var empty = 0
-            var total = 0
-            while (cursor > limit && empty < 3) {
-                val from = cursor.minusDays(IMPORT_CHUNK_DAYS)
-                val n = syncWindow(from, cursor.minusDays(1))
-                total += n
-                val hadSteps = (db.metrics().series("steps", from.toEpochDay(), cursor.minusDays(1).toEpochDay())).any { it.value > 0 }
-                empty = if (hadSteps) 0 else empty + 1
-                cursor = from
-                db.kv().put(Kv("import_cursor", cursor.toString()))
-                progress(cursor, total)
+    suspend fun importHistory(progress: (LocalDate, Int) -> Unit = { _, _ -> }): Int {
+        // The lock is taken per chunk, so the regular 3-day sync can run in between.
+        var cursor = db.kv().get("import_cursor")?.let { LocalDate.parse(it) } ?: today().plusDays(1)
+        val limit = today().minusYears(MAX_IMPORT_YEARS)
+        var empty = 0
+        var total = 0
+        while (cursor > limit && empty < 3) {
+            val from = cursor.minusDays(IMPORT_CHUNK_DAYS)
+            val chunkEnd = cursor.minusDays(1)
+            lock.withLock {
+                total += syncWindow(from, chunkEnd)
+                db.kv().put(Kv("import_cursor", from.toString()))
             }
+            val hadSteps = db.metrics().series("steps", from.toEpochDay(), chunkEnd.toEpochDay()).any { it.value > 0 }
+            empty = if (hadSteps) 0 else empty + 1
+            cursor = from
+            progress(cursor, total)
+        }
+        lock.withLock {
             db.kv().put(Kv("import_done", "true"))
             recompute()
             db.kv().put(Kv("last_sync_ms", now().toEpochMilli().toString()))
-            total
         }
+        return total
+    }
 
     suspend fun importDone(): Boolean = db.kv().get("import_done") == "true"
+
+    /** The app is usable once the most recent 30 days are in; older history follows. */
+    suspend fun recentReady(): Boolean =
+        importDone() ||
+            db.kv().get("import_cursor")?.let { LocalDate.parse(it) <= today().minusDays(IMPORT_CHUNK_DAYS - 1) } == true
+
+    suspend fun importCursor(): LocalDate? = db.kv().get("import_cursor")?.let { LocalDate.parse(it) }
+
+    /** First 30 days only (fast); call [importHistory] afterwards for the rest. */
+    suspend fun importRecent(progress: (LocalDate, Int) -> Unit = { _, _ -> }) {
+        if (recentReady()) return
+        lock.withLock {
+            val cursor = today().plusDays(1)
+            val from = cursor.minusDays(IMPORT_CHUNK_DAYS)
+            val n = syncWindow(from, cursor.minusDays(1))
+            db.kv().put(Kv("import_cursor", from.toString()))
+            progress(from, n)
+            recompute()
+            db.kv().put(Kv("last_sync_ms", now().toEpochMilli().toString()))
+        }
+    }
 
     /** Fetch [from, to] (inclusive local days) and replace the rows this sync owns there. */
     suspend fun syncWindow(

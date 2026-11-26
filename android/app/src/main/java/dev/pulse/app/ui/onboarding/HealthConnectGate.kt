@@ -58,12 +58,12 @@ fun HealthConnectGate(
             when {
                 Hc.status(context) != HealthConnectClient.SDK_AVAILABLE -> Step.NEEDS_HEALTH_CONNECT
                 !container.hc.granted().containsAll(Hc.REQUIRED) -> Step.NEEDS_PERMISSION
-                !container.sync.importDone() -> Step.IMPORTING
+                !container.sync.recentReady() -> Step.IMPORTING
                 else -> Step.READY
             }
         if (step == Step.IMPORTING) {
             try {
-                container.sync.importHistory { cursor, _ -> importedTo = cursor.toString() }
+                container.sync.importRecent { cursor, _ -> importedTo = cursor.toString() }
                 step = Step.READY
             } catch (e: Exception) {
                 error = e.message ?: e.javaClass.simpleName
@@ -81,6 +81,9 @@ fun HealthConnectGate(
     ) {
         Spacer(Modifier.height(32.dp))
         Text("Pulse", color = p.ink, fontSize = 28.sp)
+        if (step == Step.IMPORTING) {
+            Text("Reading your last 30 days. Older history continues in the background afterwards.", color = p.muted, fontSize = 13.sp)
+        }
         when (step) {
             Step.CHECKING -> Text("Checking Health Connect…", color = p.ink2)
             Step.NEEDS_HEALTH_CONNECT -> {
@@ -115,7 +118,7 @@ fun HealthConnectGate(
                 Text("Importing your history from Health Connect…", color = p.ink2)
                 LinearProgressIndicator(Modifier.fillMaxWidth(), color = p.accent, trackColor = p.surface2)
                 importedTo?.let { Text("Back to ${Fmt.day(it)}", color = p.muted, fontSize = 13.sp) }
-                Text("This runs once. Keep Pulse open until it finishes.", color = p.muted, fontSize = 12.sp)
+                Text("About 3 minutes. Keep Pulse open.", color = p.muted, fontSize = 12.sp)
                 error?.let {
                     Text("▲ $it", color = p.ink2, fontSize = 13.sp)
                     TextButton(onClick = { recheck++ }) { Text("Try again", color = p.accentInk) }

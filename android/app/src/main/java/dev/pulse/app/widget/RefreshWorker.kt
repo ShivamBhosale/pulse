@@ -33,7 +33,7 @@ class RefreshWorker(
         val c = (applicationContext as PulseApp).container
         if (Hc.status(applicationContext) != HealthConnectClient.SDK_AVAILABLE) return Result.success()
         return try {
-            if (c.sync.importDone()) c.sync.syncRecent()
+            if (c.sync.recentReady()) c.sync.syncRecent()
             val snap = c.repo.widget()
             c.db.kv().put(Kv("widget_snapshot", PulseJson.encodeToString(WidgetSnapshot.serializer(), snap)))
             PulseWidget().updateAll(applicationContext)

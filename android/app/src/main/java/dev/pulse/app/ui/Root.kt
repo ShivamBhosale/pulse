@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +26,8 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.fillMaxWidth
 import dev.pulse.app.AppContainer
 import dev.pulse.app.ui.health.HealthScreen
 import dev.pulse.app.ui.more.MoreScreen
@@ -54,6 +57,9 @@ fun PulseRoot(container: AppContainer) {
 @Composable
 private fun MainTabs(container: AppContainer) {
     var tab by rememberSaveable { mutableStateOf(Tab.Today) }
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as dev.pulse.app.PulseApp
+    androidx.compose.runtime.LaunchedEffect(Unit) { app.continueImport() }
+    val importing by app.importing.collectAsState()
     val p = LocalPulse.current
     BackHandler(enabled = tab != Tab.Today) { tab = Tab.Today }
     Scaffold(
@@ -79,7 +85,15 @@ private fun MainTabs(container: AppContainer) {
             }
         },
     ) { pad ->
-        Box(Modifier.padding(pad)) {
+        androidx.compose.foundation.layout.Column(Modifier.padding(pad)) {
+            importing?.let {
+                Text(
+                    "Importing older history in the background… back to ${dev.pulse.app.util.Fmt.day(it)}",
+                    color = p.muted,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 14.dp, vertical = 6.dp),
+                )
+            }
             when (tab) {
                 Tab.Today -> TodayScreen(container)
                 Tab.Sleep -> SleepScreen(container)

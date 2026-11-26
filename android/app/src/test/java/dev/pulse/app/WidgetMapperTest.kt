@@ -18,7 +18,7 @@ class WidgetMapperTest {
         val v = WidgetMapper.map(snapshot)
         assertEquals("of 10,000".replace(",", ""), v.stepsGoal.replace(",", "").replace(" ", "").replace(".", ""))
         assertEquals(true, v.stepsProgress in 0f..1f)
-        assertEquals("Reconnect Google in Pulse", v.warning) // test server has no token
+        assertNull(v.warning) // standalone: no Google connection to lose
     }
 
     @Test fun progressIsClamped() {
@@ -30,6 +30,6 @@ class WidgetMapperTest {
     @Test fun noSnapshotYet() {
         val v = WidgetMapper.map(null)
         assertEquals("–", v.readiness)
-        assertEquals("Open Pulse to connect", v.readinessLabel)
+        assertEquals("Open Pulse to set up", v.readinessLabel)
     }
 }
