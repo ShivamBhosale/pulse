@@ -1,10 +1,10 @@
 package dev.pulse.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -12,93 +12,50 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 import dev.pulse.app.AppContainer
-import dev.pulse.app.data.ApiResult
+import dev.pulse.app.ui.health.HealthScreen
 import dev.pulse.app.ui.more.MoreScreen
-import dev.pulse.app.ui.onboarding.PasscodeScreen
-import dev.pulse.app.ui.onboarding.ServerScreen
+import dev.pulse.app.ui.onboarding.HealthConnectGate
 import dev.pulse.app.ui.sleep.SleepScreen
 import dev.pulse.app.ui.theme.LocalPulse
 import dev.pulse.app.ui.today.TodayScreen
+import dev.pulse.app.ui.trends.TrendsScreen
 
 private enum class Tab(val label: String, val path: String) {
     Today("Today", "M3 12h4l3-8 4 16 3-8h4"),
     Sleep("Sleep", "M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"),
+    Health("Health", "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"),
+    Trends("Trends", "M4 19V5M4 19h16M8 15l3-4 3 2 5-6"),
     More("More", "M5 12h.01M12 12h.01M19 12h.01"),
 }
 
-private sealed interface Gate {
-    data object Checking : Gate
-
-    data object NeedsServer : Gate
-
-    data object NeedsPasscode : Gate
-
-    data object Ready : Gate
-}
-
-/** Onboarding gate (server URL → passcode if required) and the three-tab app. */
+/** Health Connect gate, then the five-tab app. Everything runs on the phone. */
 @Composable
 fun PulseRoot(container: AppContainer) {
-    val url by container.config.serverUrl.collectAsState(initial = "…")
-    var gate by remember { mutableStateOf<Gate>(Gate.Checking) }
-    var recheck by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(url, recheck) {
-        if (url == "…") return@LaunchedEffect
-        val u = url
-        gate =
-            if (u == null) {
-                Gate.NeedsServer
-            } else {
-                when (val s = container.repository(u).sessionState()) {
-                    is ApiResult.Ok -> if (s.value.authenticated) Gate.Ready else Gate.NeedsPasscode
-                    is ApiResult.Locked -> Gate.NeedsPasscode
-                    else -> Gate.Ready // offline: show the app; screens explain the error
-                }
-            }
-    }
-
     val p = LocalPulse.current
     Box(Modifier.fillMaxSize().background(p.page)) {
-        when (gate) {
-            Gate.Checking ->
-                CircularProgressIndicator(Modifier.align(Alignment.Center), color = p.accent)
-            Gate.NeedsServer -> ServerScreen(container, initial = url?.takeIf { it != "…" }, onSaved = { recheck++ })
-            Gate.NeedsPasscode ->
-                PasscodeScreen(container, url ?: "", onUnlocked = { recheck++ }, onChangeServer = {
-                    gate = Gate.NeedsServer
-                })
-            Gate.Ready -> MainTabs(container, url ?: "", onLocked = { gate = Gate.NeedsPasscode }, onChangeServer = {
-                gate = Gate.NeedsServer
-            })
-        }
+        HealthConnectGate(container) { MainTabs(container) }
     }
 }
 
 @Composable
-private fun MainTabs(
-    container: AppContainer,
-    url: String,
-    onLocked: () -> Unit,
-    onChangeServer: () -> Unit,
-) {
+private fun MainTabs(container: AppContainer) {
     var tab by rememberSaveable { mutableStateOf(Tab.Today) }
-    val repo = remember(url) { container.repository(url) }
     val p = LocalPulse.current
+    BackHandler(enabled = tab != Tab.Today) { tab = Tab.Today }
     Scaffold(
         containerColor = p.page,
         bottomBar = {
@@ -124,9 +81,11 @@ private fun MainTabs(
     ) { pad ->
         Box(Modifier.padding(pad)) {
             when (tab) {
-                Tab.Today -> TodayScreen(repo, onLocked)
-                Tab.Sleep -> SleepScreen(repo, onLocked)
-                Tab.More -> MoreScreen(url, onChangeServer = onChangeServer)
+                Tab.Today -> TodayScreen(container)
+                Tab.Sleep -> SleepScreen(container)
+                Tab.Health -> HealthScreen(container)
+                Tab.Trends -> TrendsScreen(container)
+                Tab.More -> MoreScreen(container)
             }
         }
     }
@@ -134,16 +93,16 @@ private fun MainTabs(
 
 /** 24-unit line icons from the web app's nav (stroke-only). */
 @Composable
-private fun lineIcon(path: String): ImageVector =
+fun lineIcon(path: String): ImageVector =
     remember(path) {
         ImageVector
             .Builder(defaultWidth = 22.dp, defaultHeight = 22.dp, viewportWidth = 24f, viewportHeight = 24f)
             .addPath(
                 pathData = PathParser().parsePathString(path).toNodes(),
                 fill = null,
-                stroke = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black),
+                stroke = SolidColor(Color.Black),
                 strokeLineWidth = 1.8f,
-                strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
             ).build()
     }

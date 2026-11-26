@@ -18,6 +18,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        RefreshWorker.refreshNow(this) // widget catches up whenever the app is opened
+        RefreshWorker.refreshNow(this)
     }
 }

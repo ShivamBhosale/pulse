@@ -24,7 +24,7 @@ object WidgetMapper {
         now: java.time.Instant = java.time.Instant.now(),
     ): WidgetView {
         if (s == null) {
-            return WidgetView("–", "Open Pulse to connect", "○", "–", 0f, "", "–", "–", "", null)
+            return WidgetView("–", "Open Pulse to set up", "○", "–", 0f, "", "–", "–", "", null)
         }
         val icon =
             when (s.readiness.status) {
@@ -44,7 +44,7 @@ object WidgetMapper {
             sleep = s.sleepMainMin?.let { Fmt.duration(it) } ?: "–",
             azm = "${s.azmWeek?.let { Fmt.num(it) } ?: "–"}/${s.azmGoal}",
             asOf = "as of ${Fmt.time(s.generatedAt)}",
-            warning = if (!s.authOk) "Reconnect Google in Pulse" else null,
+            warning = null,
         )
     }
 }

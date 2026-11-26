@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.openapi.generator)
+    alias(libs.plugins.ksp)
 }
 
 // ---- API client generated from the server's OpenAPI spec (never committed) -------------------
@@ -26,10 +27,9 @@ openApiGenerate {
             "omitGradleWrapper" to "true",
         ),
     )
-    // Only the API interfaces, models and the one helper they import.
-    globalProperties.set(
-        mapOf("apis" to "", "models" to "", "supportingFiles" to "CollectionFormats.kt"),
-    )
+    // Only the models: the app is standalone (Health Connect) and reuses the API's model
+    // classes as its UI data types, so screens stay identical to the server-backed version.
+    globalProperties.set(mapOf("models" to ""))
     generateApiTests.set(false)
     generateModelTests.set(false)
     generateApiDocumentation.set(false)
@@ -43,6 +43,9 @@ openApiGenerate {
 tasks.named("openApiGenerate") {
     val spec = rootProject.file("../frontend/openapi.json")
     val modelsDir = generatedApiDir.map { it.dir("src/main/kotlin/dev/pulse/api/models") }
+    val outDir = generatedApiDir
+    // Start clean: the generator never deletes files it no longer produces.
+    doFirst { outDir.get().asFile.deleteRecursively() }
     doLast {
         @Suppress("UNCHECKED_CAST")
         val root = groovy.json.JsonSlurper().parse(spec) as Map<String, Any?>
@@ -91,8 +94,8 @@ android {
         applicationId = "dev.pulse.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "2.0.0"
     }
 
     signingConfigs {
@@ -164,15 +167,14 @@ dependencies {
     implementation(libs.glance.material3)
     implementation(libs.work.runtime)
     implementation(libs.datastore.preferences)
-    implementation(libs.browser)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.kotlinx)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
 
+    implementation(libs.health.connect)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
     testImplementation(libs.junit)
-    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
 }

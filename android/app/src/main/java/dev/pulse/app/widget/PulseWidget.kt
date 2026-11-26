@@ -54,7 +54,7 @@ class PulseWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId,
     ) {
-        val json = (context.applicationContext as PulseApp).container.config.widgetJson()
+        val json = (context.applicationContext as PulseApp).container.db.kv().get("widget_snapshot")
         val snapshot = json?.let { runCatching { PulseJson.decodeFromString(WidgetSnapshot.serializer(), it) }.getOrNull() }
         val view = WidgetMapper.map(snapshot)
         provideContent { GlanceTheme { Content(view) } }

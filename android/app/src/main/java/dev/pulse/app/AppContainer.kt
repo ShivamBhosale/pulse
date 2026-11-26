@@ -1,22 +1,20 @@
 package dev.pulse.app
 
 import android.content.Context
-import dev.pulse.app.data.PersistentCookieJar
-import dev.pulse.app.data.PulseRepository
-import dev.pulse.app.data.ServerConfig
+import dev.pulse.app.data.LocalRepository
+import dev.pulse.app.data.Prefs
+import dev.pulse.app.db.PulseDb
+import dev.pulse.app.hc.HealthConnectSource
+import dev.pulse.app.sync.LocalSync
 
-/** Manual dependency injection: one place that builds the long-lived objects. */
+/** Manual dependency injection: everything lives on the phone. */
 class AppContainer(context: Context) {
     private val app = context.applicationContext
-    val config = ServerConfig(app)
-    val cookies = PersistentCookieJar(app.getSharedPreferences("pulse_cookies", Context.MODE_PRIVATE))
-    private val client = PulseRepository.client(cookies, BuildConfig.DEBUG)
+    val db: PulseDb = PulseDb.open(app)
+    val prefs = Prefs(db.kv())
+    val repo = LocalRepository(db, prefs)
 
-    @Volatile private var cached: PulseRepository? = null
-
-    /** Repository for [baseUrl], rebuilt only when the URL changes. */
-    fun repository(baseUrl: String): PulseRepository =
-        cached?.takeIf { it.baseUrl == baseUrl } ?: PulseRepository(baseUrl, client).also { cached = it }
-
-    suspend fun repositoryOrNull(): PulseRepository? = config.currentUrl()?.let { repository(it) }
+    /** Created lazily: Health Connect may not be installed/available yet. */
+    val hc: HealthConnectSource by lazy { HealthConnectSource(app) }
+    val sync: LocalSync by lazy { LocalSync(db, hc, prefs) }
 }

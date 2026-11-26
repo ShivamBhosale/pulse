@@ -5,8 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.pulse.api.models.Journal
 import dev.pulse.api.models.TagOut
 import dev.pulse.api.models.Today
-import dev.pulse.app.data.ApiResult
-import dev.pulse.app.data.PulseRepository
+import dev.pulse.app.AppContainer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +19,6 @@ data class TodayState(
     val refreshing: Boolean = false,
     val today: Today? = null,
     val error: String? = null,
-    val locked: Boolean = false,
     val tags: List<TagOut> = emptyList(),
     val journalDate: String? = null,
     val journal: Journal? = null,
@@ -28,8 +26,9 @@ data class TodayState(
 )
 
 class TodayViewModel(
-    private val repo: PulseRepository,
+    private val c: AppContainer,
 ) : ViewModel() {
+    private val repo = c.repo
     private val _state = MutableStateFlow(TodayState())
     val state: StateFlow<TodayState> = _state
     private var noteJob: Job? = null
@@ -40,25 +39,27 @@ class TodayViewModel(
 
     fun load() =
         viewModelScope.launch {
-            when (val r = repo.today()) {
-                is ApiResult.Ok -> {
-                    _state.update { it.copy(loading = false, today = r.value, error = null) }
-                    if (_state.value.journalDate == null) selectJournalDate(r.value.date)
+            try {
+                val t = repo.todayModel()
+                _state.update { it.copy(loading = false, today = t, error = null) }
+                if (_state.value.journalDate == null) selectJournalDate(t.date)
+                if (_state.value.tags.isEmpty()) {
+                    val tags = repo.tags()
+                    _state.update { it.copy(tags = tags) }
                 }
-                else -> fail(r)
-            }
-            if (_state.value.tags.isEmpty()) {
-                (repo.tags() as? ApiResult.Ok)?.let { t -> _state.update { it.copy(tags = t.value) } }
+            } catch (e: Exception) {
+                fail(e)
             }
         }
 
-    /** Pull to refresh: the server syncs from Google, the phone waits, then reloads. */
+    /** Pull to refresh: re-read the last 3 days from Health Connect, recompute, reload. */
     fun refresh() =
         viewModelScope.launch {
             _state.update { it.copy(refreshing = true) }
-            when (val r = repo.syncAndWait()) {
-                is ApiResult.Ok -> Unit
-                else -> fail(r)
+            try {
+                c.sync.syncRecent()
+            } catch (e: Exception) {
+                fail(e)
             }
             load().join()
             _state.update { it.copy(refreshing = false) }
@@ -67,10 +68,8 @@ class TodayViewModel(
     fun selectJournalDate(date: String) =
         viewModelScope.launch {
             _state.update { it.copy(journalDate = date, journal = null, journalStatus = null) }
-            when (val r = repo.journal(date)) {
-                is ApiResult.Ok -> _state.update { if (it.journalDate == date) it.copy(journal = r.value) else it }
-                else -> fail(r)
-            }
+            val j = repo.journal(LocalDate.parse(date))
+            _state.update { if (it.journalDate == date) it.copy(journal = j) else it }
         }
 
     fun yesterdayOf(today: String): String = LocalDate.parse(today).minusDays(1).toString()
@@ -96,25 +95,26 @@ class TodayViewModel(
         noteJob =
             viewModelScope.launch {
                 if (!immediate) delay(800)
-                when (val r = repo.putJournal(next.date, next.tags, next.note)) {
-                    is ApiResult.Ok -> _state.update { it.copy(journalStatus = "Saved") }
-                    is ApiResult.Failed ->
-                        _state.update { it.copy(journal = previous, journalStatus = "Not saved: ${r.message}") }
-                    is ApiResult.Offline ->
-                        _state.update { it.copy(journal = previous, journalStatus = "Not saved: offline") }
-                    ApiResult.Locked -> fail(r)
+                try {
+                    repo.putJournal(LocalDate.parse(next.date), next.tags, next.note)
+                    _state.update { it.copy(journalStatus = "Saved") }
+                } catch (e: Exception) {
+                    _state.update { it.copy(journal = previous, journalStatus = "Not saved: ${e.message}") }
                 }
             }
     }
 
-    private fun fail(r: ApiResult<*>) {
+    private fun fail(e: Exception) {
         _state.update {
-            when (r) {
-                ApiResult.Locked -> it.copy(loading = false, locked = true)
-                is ApiResult.Offline -> it.copy(loading = false, error = "Can't reach Pulse. Is Tailscale on? (${r.message})")
-                is ApiResult.Failed -> it.copy(loading = false, error = r.message)
-                is ApiResult.Ok -> it
-            }
+            it.copy(
+                loading = false,
+                error =
+                    if (e is SecurityException) {
+                        "Health Connect permission missing. Open Settings → Health Connect → Pulse."
+                    } else {
+                        e.message ?: e.javaClass.simpleName
+                    },
+            )
         }
     }
 }

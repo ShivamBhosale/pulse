@@ -43,8 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.pulse.api.models.SleepNight
 import dev.pulse.api.models.SleepSessionOut
 import dev.pulse.api.models.TagOut
-import dev.pulse.app.data.ApiResult
-import dev.pulse.app.data.PulseRepository
+import dev.pulse.app.AppContainer
 import dev.pulse.app.ui.Banner
 import dev.pulse.app.ui.Eyebrow
 import dev.pulse.app.ui.PulseCard
@@ -64,15 +63,13 @@ data class SleepState(
     val eveningTags: List<String> = emptyList(),
     val eveningNote: String = "",
     val error: String? = null,
-    val locked: Boolean = false,
 )
 
 class SleepViewModel(
-    private val repo: PulseRepository,
+    private val c: AppContainer,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SleepState())
     val state: StateFlow<SleepState> = _state
-    private var tags: List<TagOut>? = null
 
     init {
         load(null)
@@ -81,25 +78,18 @@ class SleepViewModel(
     fun load(date: String?) =
         viewModelScope.launch {
             _state.update { it.copy(loading = true) }
-            when (val r = repo.sleep(date)) {
-                is ApiResult.Ok -> {
-                    _state.update { it.copy(loading = false, night = r.value, error = null) }
-                    loadEvening(r.value.date)
-                }
-                ApiResult.Locked -> _state.update { it.copy(loading = false, locked = true) }
-                is ApiResult.Offline -> _state.update { it.copy(loading = false, error = "Can't reach Pulse (${r.message})") }
-                is ApiResult.Failed -> _state.update { it.copy(loading = false, error = r.message) }
+            try {
+                val n = c.repo.sleepNight(date?.let { LocalDate.parse(it) })
+                _state.update { it.copy(loading = false, night = n, error = null) }
+                val evening = LocalDate.parse(n.date).minusDays(1)
+                val tags = c.repo.tags()
+                val j = c.repo.journal(evening)
+                val labels = tags.filter { it.kind == TagOut.Kind.evening && it.key in j.tags }.map { it.label }
+                _state.update { it.copy(eveningTags = labels, eveningNote = j.note) }
+            } catch (e: Exception) {
+                _state.update { it.copy(loading = false, error = e.message ?: e.javaClass.simpleName) }
             }
         }
-
-    /** Evening tags from the day before this night (alcohol on Tue → Wed's night). */
-    private suspend fun loadEvening(wakeDate: String) {
-        val all = tags ?: (repo.tags() as? ApiResult.Ok)?.value?.also { tags = it } ?: emptyList()
-        val evening = LocalDate.parse(wakeDate).minusDays(1).toString()
-        val j = (repo.journal(evening) as? ApiResult.Ok)?.value
-        val labels = all.filter { it.kind == TagOut.Kind.evening && j?.tags?.contains(it.key) == true }.map { it.label }
-        _state.update { it.copy(eveningTags = labels, eveningNote = j?.note.orEmpty()) }
-    }
 }
 
 private val STAGES = listOf("AWAKE", "REM", "LIGHT", "DEEP")
@@ -117,14 +107,10 @@ private fun stageColor(
     }
 
 @Composable
-fun SleepScreen(
-    repo: PulseRepository,
-    onLocked: () -> Unit,
-) {
-    val vm: SleepViewModel = viewModel(key = "sleep-${repo.baseUrl}") { SleepViewModel(repo) }
+fun SleepScreen(container: AppContainer) {
+    val vm: SleepViewModel = viewModel(key = "sleep") { SleepViewModel(container) }
     val s by vm.state.collectAsStateWithLifecycle()
     val p = LocalPulse.current
-    LaunchedEffect(s.locked) { if (s.locked) onLocked() }
     val n = s.night
     LazyColumn(
         Modifier.fillMaxSize(),

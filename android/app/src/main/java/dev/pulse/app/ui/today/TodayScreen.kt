@@ -45,7 +45,7 @@ import dev.pulse.api.models.SummarySentence
 import dev.pulse.api.models.TagOut
 import dev.pulse.api.models.Tile
 import dev.pulse.api.models.Today
-import dev.pulse.app.data.PulseRepository
+import dev.pulse.app.AppContainer
 import dev.pulse.app.ui.Banner
 import dev.pulse.app.ui.Eyebrow
 import dev.pulse.app.ui.PulseCard
@@ -55,15 +55,11 @@ import dev.pulse.app.util.Fmt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TodayScreen(
-    repo: PulseRepository,
-    onLocked: () -> Unit,
-) {
-    val vm: TodayViewModel = viewModel(key = "today-${repo.baseUrl}") { TodayViewModel(repo) }
+fun TodayScreen(container: AppContainer) {
+    val vm: TodayViewModel = viewModel(key = "today") { TodayViewModel(container) }
     val s by vm.state.collectAsStateWithLifecycle()
     val p = LocalPulse.current
     var readiness by remember { mutableStateOf<Tile?>(null) }
-    LaunchedEffect(s.locked) { if (s.locked) onLocked() }
 
     PullToRefreshBox(isRefreshing = s.refreshing, onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize()) {
         val today = s.today
@@ -128,7 +124,7 @@ private fun TodayContent(
         item { JournalCard(today.date, s, vm) }
         item {
             Text(
-                "Pull down to sync now. Heart, Activity, Trends and more are under More.",
+                "Pull down to read the latest from Health Connect.",
                 color = p.muted,
                 fontSize = 11.sp,
             )
