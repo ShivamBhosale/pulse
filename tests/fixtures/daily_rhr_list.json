@@ -1,0 +1,8 @@
+{
+  "dataPoints": [
+    {"name": "users/4417/dataTypes/daily-resting-heart-rate/dataPoints/abc123",
+     "dailyRestingHeartRate": {"date": {"year": 2026, "month": 11, "day": 20}, "beatsPerMinute": 54}},
+    {"name": "users/4417/dataTypes/daily-resting-heart-rate/dataPoints/abc122",
+     "dailyRestingHeartRate": {"date": {"year": 2026, "month": 11, "day": 14}, "beatsPerMinute": 57}}
+  ]
+}

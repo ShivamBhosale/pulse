@@ -1,0 +1,12 @@
+{
+ "steps": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "civilEndTime": {"date": {"year": 2026, "month": 11, "day": 21}}, "steps": {"countSum": "12131"}}]},
+ "distance": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "distance": {"millimetersSum": "7909406"}}]},
+ "total-calories": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "totalCalories": {"kcalSum": 2264.2}}]},
+ "active-energy-burned": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "activeEnergyBurned": {"kcalSum": 614.0}}]},
+ "sedentary-period": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "sedentaryPeriod": {"durationSum": "42300s"}}]},
+ "heart-rate": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "heartRate": {"beatsPerMinuteAvg": 78.0, "beatsPerMinuteMax": 123, "beatsPerMinuteMin": 55}}]},
+ "active-minutes": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "activeMinutes": {"activeMinutesRollupByActivityLevel": [{"activityLevel": "LIGHT", "activeMinutesSum": "222"}, {"activityLevel": "VIGOROUS", "activeMinutesSum": "33"}]}}]},
+ "time-in-heart-rate-zone": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "timeInHeartRateZone": {"timeInHeartRateZones": [{"heartRateZone": "LIGHT", "duration": "84840s"}]}}]},
+ "calories-in-heart-rate-zone": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}, "caloriesInHeartRateZone": {"caloriesInHeartRateZones": [{"heartRateZone": "MODERATE", "kcal": 215.3}]}}]},
+ "active-zone-minutes": {"rollupDataPoints": [{"civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}}}]}
+}

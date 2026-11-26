@@ -1,0 +1,27 @@
+{"dataPoints": [
+  {"dataPointName": "users/u1/dataTypes/sleep/dataPoints/night-1",
+   "sleep": {
+     "interval": {"startTime": "2026-11-21T03:50:00Z", "startUtcOffset": "-18000s",
+                  "endTime": "2026-11-21T11:00:00Z", "endUtcOffset": "-18000s"},
+     "type": "STAGES",
+     "metadata": {"stagesStatus": "SUCCEEDED", "processed": true, "mainSleep": true},
+     "stages": [
+       {"startTime": "2026-11-21T03:50:00Z", "endTime": "2026-11-21T04:00:00Z", "type": "AWAKE"},
+       {"startTime": "2026-11-21T04:00:00Z", "endTime": "2026-11-21T06:00:00Z", "type": "LIGHT"},
+       {"startTime": "2026-11-21T06:00:00Z", "endTime": "2026-11-21T07:30:00Z", "type": "DEEP"},
+       {"startTime": "2026-11-21T07:30:00Z", "endTime": "2026-11-21T09:00:00Z", "type": "REM"},
+       {"startTime": "2026-11-21T09:00:00Z", "endTime": "2026-11-21T11:00:00Z", "type": "LIGHT"}
+     ],
+     "summary": {"minutesInSleepPeriod": "430", "minutesAfterWakeUp": "0", "minutesToFallAsleep": "10",
+                 "minutesAsleep": "420", "minutesAwake": "10",
+                 "stagesSummary": [{"type": "AWAKE", "minutes": "10", "count": "1"},
+                                   {"type": "LIGHT", "minutes": "240", "count": "2"},
+                                   {"type": "DEEP", "minutes": "90", "count": "1"},
+                                   {"type": "REM", "minutes": "90", "count": "1"}]}}},
+  {"dataPointName": "users/u1/dataTypes/sleep/dataPoints/nap-1",
+   "sleep": {
+     "interval": {"startTime": "2026-11-21T19:00:00Z", "startUtcOffset": "-18000s",
+                  "endTime": "2026-11-21T19:40:00Z", "endUtcOffset": "-18000s"},
+     "type": "CLASSIC", "metadata": {"mainSleep": false},
+     "summary": {"minutesInSleepPeriod": "40", "minutesAsleep": "35", "minutesAwake": "5"}}}
+]}

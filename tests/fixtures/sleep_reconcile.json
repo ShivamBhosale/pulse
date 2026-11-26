@@ -1,0 +1,9 @@
+{
+  "dataPoints": [
+    {"dataPointName": "users/4417/dataTypes/sleep/dataPoints/s-991",
+     "sleep": {"interval": {"startTime": "2026-11-20T04:12:00Z", "endTime": "2026-11-20T11:48:00Z"},
+               "type": "STAGES",
+               "stages": [{"type": "LIGHT"}, {"type": "DEEP"}, {"type": "REM"}],
+               "summary": {"minutesInSleepPeriod": 456, "minutesAsleep": 418, "minutesAwake": 38}}}
+  ]
+}

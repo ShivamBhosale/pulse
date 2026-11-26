@@ -1,0 +1,21 @@
+{"dataPoints": [
+  {"name": "users/u1/dataTypes/exercise/dataPoints/fit-1",
+   "dataSource": {"recordingMethod": "PASSIVELY_MEASURED", "device": {"displayName": "Fitbit Air"}, "platform": "FITBIT"},
+   "exercise": {"interval": {"startTime": "2026-11-21T14:00:00Z", "startUtcOffset": "-18000s",
+                             "endTime": "2026-11-21T14:30:00Z", "endUtcOffset": "-18000s"},
+                "exerciseType": "WALKING", "displayName": "Walk", "activeDuration": "1790.5s",
+                "metricsSummary": {"distanceMillimeters": 2400000, "steps": "3100", "caloriesKcal": 140,
+                                   "averageHeartRateBeatsPerMinute": 104}}},
+  {"name": "users/u1/dataTypes/exercise/dataPoints/hc-1",
+   "dataSource": {"recordingMethod": "PASSIVELY_MEASURED", "application": {"packageName": "com.example"}, "platform": "HEALTH_CONNECT"},
+   "exercise": {"interval": {"startTime": "2026-11-21T14:02:00Z", "startUtcOffset": "-18000s",
+                             "endTime": "2026-11-21T14:29:00Z", "endUtcOffset": "-18000s"},
+                "exerciseType": "WALKING", "displayName": "Walk", "activeDuration": "1600s",
+                "metricsSummary": {"steps": "2950"}}},
+  {"name": "users/u1/dataTypes/exercise/dataPoints/hc-2",
+   "dataSource": {"recordingMethod": "PASSIVELY_MEASURED", "platform": "HEALTH_CONNECT"},
+   "exercise": {"interval": {"startTime": "2026-11-21T22:00:00Z", "startUtcOffset": "-18000s",
+                             "endTime": "2026-11-21T22:45:00Z", "endUtcOffset": "-18000s"},
+                "exerciseType": "STRENGTH_TRAINING", "displayName": "Weights", "activeDuration": "2700s",
+                "metricsSummary": {}}}
+]}

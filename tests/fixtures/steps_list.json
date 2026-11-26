@@ -1,0 +1,23 @@
+{
+  "dataPoints": [
+    {
+      "name": "",
+      "dataSource": {"recordingMethod": "PASSIVELY_MEASURED", "device": {"manufacturer": "Google", "displayName": "Fitbit Air", "formFactor": "FITNESS_BAND"}, "platform": "FITBIT"},
+      "steps": {
+        "interval": {"startTime": "2026-11-20T14:05:00Z", "startUtcOffset": "-18000s", "endTime": "2026-11-20T14:06:00Z", "endUtcOffset": "-18000s",
+                     "civilStartTime": {"date": {"year": 2026, "month": 11, "day": 20}, "time": {"hours": 9, "minutes": 5}},
+                     "civilEndTime": {"date": {"year": 2026, "month": 11, "day": 20}, "time": {"hours": 9, "minutes": 6}}},
+        "count": "112"
+      }
+    },
+    {
+      "name": "",
+      "dataSource": {"recordingMethod": "PASSIVELY_MEASURED", "device": {"manufacturer": "Google", "displayName": "Fitbit Air", "formFactor": "FITNESS_BAND"}, "platform": "FITBIT"},
+      "steps": {
+        "interval": {"startTime": "2026-11-15T22:30:00.123456789Z", "startUtcOffset": "-18000s", "endTime": "2026-11-15T22:31:00Z", "endUtcOffset": "-18000s"},
+        "count": "40"
+      }
+    }
+  ],
+  "nextPageToken": ""
+}

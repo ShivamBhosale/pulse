@@ -1,0 +1,2 @@
+{"error": {"code": 400, "message": "Account is not linked.", "status": "FAILED_PRECONDITION",
+  "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": "ACCOUNT_NOT_LINKED", "domain": "health.googleapis.com"}]}}

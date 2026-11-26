@@ -1,0 +1,12 @@
+{"dataPoints": [
+  {"dataSource": {"platform": "FITBIT", "device": {"displayName": "Fitbit Air"}, "recordingMethod": "PASSIVELY_MEASURED"},
+   "activeZoneMinutes": {"interval": {"startTime": "2026-11-21T14:10:00Z", "startUtcOffset": "-18000s",
+       "endTime": "2026-11-21T14:11:00Z", "endUtcOffset": "-18000s",
+       "civilStartTime": {"date": {"year": 2026, "month": 11, "day": 21}, "time": {"hours": 9, "minutes": 10}}},
+     "heartRateZone": "FAT_BURN", "activeZoneMinutes": "1"}},
+  {"dataSource": {"platform": "FITBIT", "device": {"displayName": "Fitbit Air"}, "recordingMethod": "PASSIVELY_MEASURED"},
+   "activeZoneMinutes": {"interval": {"startTime": "2026-11-21T14:11:00Z", "startUtcOffset": "-18000s",
+       "endTime": "2026-11-21T14:12:00Z", "endUtcOffset": "-18000s",
+       "civilStartTime": {"date": {"year": 2026, "month": 11, "day": 21}, "time": {"hours": 9, "minutes": 11}}},
+     "heartRateZone": "CARDIO", "activeZoneMinutes": "2"}}
+]}

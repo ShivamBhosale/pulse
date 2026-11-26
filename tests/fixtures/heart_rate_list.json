@@ -1,0 +1,7 @@
+{
+  "dataPoints": [
+    {"heartRate": {"sampleTime": {"physicalTime": "2026-11-20T15:00:05Z", "utcOffset": "-18000s"}, "beatsPerMinute": "71"}},
+    {"heartRate": {"sampleTime": {"physicalTime": "2026-11-20T15:00:00Z", "utcOffset": "-18000s"}, "beatsPerMinute": "70"}}
+  ],
+  "nextPageToken": "page-2"
+}
