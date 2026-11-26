@@ -152,7 +152,7 @@ The probe output contains:
 - Your account time zone and units, from `users/me/settings`.
 - A coverage table: type, status (`ok` / `empty` / `error <code>`), number of points
   (`+` means more pages exist beyond `--max-pages`), first and last timestamp in
-  America/Toronto, and sample values.
+  your time zone, and sample values.
 - `fixtures/raw/*.json`: exact responses, mode 0600, never committed.
 - `fixtures/scrubbed/*.json`: the same with user, data point and client IDs replaced by HMAC
   placeholders. The salt is in `data/scrub_salt`. Also git-ignored by default.

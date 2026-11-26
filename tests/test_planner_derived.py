@@ -89,7 +89,7 @@ def test_physical_rollup_chunks_stay_under_api_limits_across_dst():
     from pulse.datatypes import CivilWindow
     from pulse.sync.streams import STREAMS_BY_NAME
 
-    tz = ZoneInfo("America/Toronto")
+    tz = ZoneInfo("America/New_York")
     limits = {"hr_minute": 14, "steps_15m": 90}  # days, per the API (physical time)
     for name, limit in limits.items():
         stream = STREAMS_BY_NAME[name]

@@ -10,7 +10,7 @@ from pulse.models import DailyMetric, IntradayHR
 from tests.test_api import NOW, TODAY, app_env, client  # noqa: F401 - pytest fixtures
 from tests.test_api_phase2 import _StubService
 
-TZ = ZoneInfo("America/Toronto")
+TZ = ZoneInfo("America/New_York")
 API = "/api/v1"
 
 

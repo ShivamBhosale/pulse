@@ -22,7 +22,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from pulse.api.app import create_app  # noqa: E402
 from pulse.config import Settings  # noqa: E402
 from pulse.db import make_engine, make_session_factory, migrate  # noqa: E402
-from tests.test_api import NOW, TODAY, _seed  # noqa: E402
+from tests.test_api import NOW, TODAY, TZ, _seed  # noqa: E402
 
 OUT = ROOT / "android/app/src/test/resources/fixtures"
 
@@ -34,6 +34,7 @@ def main() -> None:
             data_dir=Path(tmp) / "data",
             static_dir=Path(tmp) / "dist",
             scheduler_enabled=False,
+            tz=str(TZ),
             _env_file=None,
         )  # type: ignore[call-arg]
         engine = make_engine(None)

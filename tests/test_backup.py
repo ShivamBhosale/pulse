@@ -21,7 +21,7 @@ from pulse.fileio import is_private
 from pulse.models import SyncState
 from pulse.scheduler import BACKUP_JOB_ID, SyncService
 
-TZ = ZoneInfo("America/Toronto")
+TZ = ZoneInfo("America/New_York")
 
 
 def _live_db(path: Path) -> sqlite3.Connection:

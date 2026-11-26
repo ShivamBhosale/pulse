@@ -10,7 +10,7 @@ from pulse.datatypes import (
     page_size_for,
 )
 
-TZ = ZoneInfo("America/Toronto")
+TZ = ZoneInfo("America/New_York")
 
 REQUESTED = [
     "steps",
@@ -66,7 +66,7 @@ def test_last_days_window_is_half_open():
 
 
 def test_utc_bounds_across_dst_fall_back():
-    # 2026-11-01 is the fall-back day in Toronto: a 25-hour civil day.
+    # 2026-11-01 is the fall-back day in New York: a 25-hour civil day.
     w = CivilWindow(date(2026, 11, 1), date(2026, 11, 2), TZ)
     s, e = w.utc_bounds()
     assert s == datetime(2026, 11, 1, 4, 0, tzinfo=UTC)  # EDT midnight

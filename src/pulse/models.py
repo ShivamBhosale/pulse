@@ -1,4 +1,4 @@
-"""Database schema. All instants are UTC; ``civil_date`` is the America/Toronto (configurable)
+"""Database schema. All instants are UTC; ``civil_date`` is the PULSE_TZ (configurable)
 calendar day the API assigns to the data, which is what day boundaries follow."""
 
 from __future__ import annotations

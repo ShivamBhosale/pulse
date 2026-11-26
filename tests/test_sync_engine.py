@@ -11,13 +11,13 @@ from pulse.models import DailyMetric, IntradayHR, SleepSession, SleepStage, Sync
 from pulse.sync.engine import AUTH_ROW, BACKFILL_ROW, SyncBusy, SyncEngine, sync_lock
 from tests.fakeapi import FakeApi
 
-TZ = ZoneInfo("America/Toronto")
+TZ = ZoneInfo("America/New_York")
 TODAY = date(2026, 11, 21)
-NOW = datetime(2026, 11, 21, 17, 0, tzinfo=UTC)  # noon in Toronto
+NOW = datetime(2026, 11, 21, 17, 0, tzinfo=UTC)  # noon in New York
 
 
 def at(d: date, hour: int, minute: int = 0) -> datetime:
-    """UTC instant for a Toronto wall-clock time in November (EST, UTC-5)."""
+    """UTC instant for a New York wall-clock time in November (EST, UTC-5)."""
     return datetime(d.year, d.month, d.day, hour, minute, tzinfo=UTC) + timedelta(hours=5)
 
 

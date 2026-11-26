@@ -10,7 +10,7 @@ def test_scrubs_identity_ids_and_keeps_shape(load_fixture):
     assert out["legacyUserId"].startswith("scrubbed-")
     assert out["healthUserId"].startswith("scrubbed-")
     assert "A1B2C3" not in json.dumps(out)
-    assert "111111256096816351" not in json.dumps(out)
+    assert "000000000000000042" not in json.dumps(out)
 
 
 def test_resource_names_and_values(load_fixture):

@@ -29,8 +29,8 @@ class FormatTest {
     }
 
     @Test fun timesAndAgo() {
-        assertEquals("12:21", Fmt.time("2026-11-22T17:21:00+00:00", ZoneId.of("America/Toronto")))
-        assertEquals("12:21", Fmt.time("2026-11-22T17:21:00Z", ZoneId.of("America/Toronto")))
+        assertEquals("12:21", Fmt.time("2026-11-22T17:21:00+00:00", ZoneId.of("America/New_York")))
+        assertEquals("12:21", Fmt.time("2026-11-22T17:21:00Z", ZoneId.of("America/New_York")))
         val now = Instant.parse("2026-11-22T17:30:00Z")
         assertEquals("9 min ago", Fmt.ago("2026-11-22T17:21:00Z", now))
         assertEquals("never", Fmt.ago(null, now))

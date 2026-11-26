@@ -15,7 +15,7 @@ import java.time.ZoneId
 
 /** Health Connect → Pulse rows, with fake records (no phone needed). */
 class HcMappingTest {
-    private val tz = ZoneId.of("America/Toronto")
+    private val tz = ZoneId.of("America/New_York")
 
     private fun at(s: String) = Instant.parse(s)
 

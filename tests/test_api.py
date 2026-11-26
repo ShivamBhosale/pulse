@@ -13,7 +13,7 @@ from pulse.models import DailyMetric, IntradaySteps, SyncState
 from pulse.sync.engine import SyncEngine
 from tests.fakeapi import FakeApi
 
-TZ = ZoneInfo("America/Toronto")
+TZ = ZoneInfo("America/New_York")
 TODAY = date(2026, 11, 21)
 NOW = datetime(2026, 11, 21, 17, 0, tzinfo=UTC)
 
@@ -57,6 +57,7 @@ def app_env(tmp_path):
         data_dir=tmp_path / "data",
         static_dir=tmp_path / "dist",
         scheduler_enabled=False,
+        tz=str(TZ),
         _env_file=None,
     )  # type: ignore[call-arg]
     engine = make_engine(None)

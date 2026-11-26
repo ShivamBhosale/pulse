@@ -99,7 +99,7 @@ Google Health API v4 ──(httpx, throttled, backoff)──► sync streams ─
   | `sleep` | sleep sessions, via reconcile | 30 days |
 
 - **Revisions and deletions.** A stream owns specific rows per civil date. Each fetch deletes those rows inside the window, then upserts the new ones, all in one transaction. Device revisions and upstream deletions therefore show up. Re-running a sync is idempotent.
-- **Days follow the API's civil dates** in `PULSE_TZ` (America/Toronto). Instants are stored in UTC, and DST is handled.
+- **Days follow the API's civil dates** in `PULSE_TZ` (your IANA time zone, for example America/New_York). Instants are stored in UTC, and DST is handled.
 - **`sync_state`** records per stream: high-water mark, last success, last error, and the backfill cursor. Token-refresh failures land in the `_auth` row. `/api/v1/status` reports them, and the UI shows a reconnect banner.
 - **Errors.** 429 and 5xx responses are retried with jittered exponential backoff that respects `Retry-After`. Logs are JSON lines in `data/logs/pulse.log` (`jq . data/logs/pulse.log`), with tokens redacted.
 
@@ -273,3 +273,7 @@ Tests never call the live API. They use `httpx.MockTransport` and the JSON in `t
 The server binds to `PULSE_BIND`, which defaults to `0.0.0.0`. To serve only on your tailnet, set it to the server's Tailscale IP in `.env`, or to `127.0.0.1` when you use `tailscale serve`.
 
 Pulse has no user accounts. You can add `pulse passcode set` for a lock screen. The passcode is stored as an scrypt hash, sessions use an HMAC-signed HttpOnly cookie, and failed attempts are limited to 5 per minute.
+
+## Licence and disclaimer
+
+Pulse is released under the [MIT licence](LICENSE): you're free to use, change and share it. It's an independent project, not affiliated with Google or Fitbit. It is not a medical device, and its scores are personal estimates, not medical advice.

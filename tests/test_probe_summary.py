@@ -73,7 +73,7 @@ def test_probe_falls_back_when_filter_rejected(load_fixture):
             )
         return httpx.Response(200, json=rhr)
 
-    window = CivilWindow(date(2026, 11, 15), date(2026, 11, 22), ZoneInfo("America/Toronto"))
+    window = CivilWindow(date(2026, 11, 15), date(2026, 11, 22), ZoneInfo("America/New_York"))
     cov, record = probe_type(_client(handler), REGISTRY["daily-resting-heart-rate"], window, 1)
     assert cov.status is Status.OK
     assert cov.filter_used is not None and cov.filter_used.startswith("dailyRestingHeartRate.date")
@@ -89,7 +89,7 @@ def test_probe_reports_permission_error_without_fallback():
         calls += 1
         return httpx.Response(403, json={"error": {"status": "PERMISSION_DENIED", "message": "no"}})
 
-    window = CivilWindow(date(2026, 11, 15), date(2026, 11, 22), ZoneInfo("America/Toronto"))
+    window = CivilWindow(date(2026, 11, 15), date(2026, 11, 22), ZoneInfo("America/New_York"))
     cov, _ = probe_type(_client(handler), REGISTRY["weight"], window, 1)
     assert cov.status is Status.ERROR
     assert cov.error == "403 PERMISSION_DENIED"
@@ -105,7 +105,7 @@ def test_probe_uses_reconcile_for_sleep_and_flags_truncation(load_fixture):
         assert req.url.params["pageSize"] == "25"
         return httpx.Response(200, json=page)
 
-    window = CivilWindow(date(2026, 11, 15), date(2026, 11, 22), ZoneInfo("America/Toronto"))
+    window = CivilWindow(date(2026, 11, 15), date(2026, 11, 22), ZoneInfo("America/New_York"))
     cov, _ = probe_type(_client(handler), REGISTRY["sleep"], window, max_pages=2)
     assert paths == ["/v4/users/me/dataTypes/sleep/dataPoints:reconcile"] * 2
     assert cov.truncated and cov.points == 2
@@ -127,19 +127,21 @@ def test_run_probe_writes_private_raw_and_scrubbed_fixtures(tmp_path, load_fixtu
         if path.endswith("/profile"):
             return httpx.Response(200, json={"name": "users/me/profile", "age": 33})
         if path.endswith("/settings"):
-            return httpx.Response(200, json={"timeZone": "America/Toronto"})
+            return httpx.Response(200, json={"timeZone": "America/New_York"})
         if "daily-resting-heart-rate" in path:
             return httpx.Response(200, json=rhr)
         return httpx.Response(200, json={})
 
     writer = FixtureWriter(tmp_path / "fx", Scrubber(b"salt"))
     types = [REGISTRY["daily-resting-heart-rate"], REGISTRY["weight"]]
-    account, results = run_probe(_client(handler), types, ZoneInfo("America/Toronto"), 7, 1, writer)
-    assert account["identity"]["healthUserId"] == "111111256096816351"
+    account, results = run_probe(
+        _client(handler), types, ZoneInfo("America/New_York"), 7, 1, writer
+    )
+    assert account["identity"]["healthUserId"] == "000000000000000042"
     assert [r.status for r in results] == [Status.OK, Status.EMPTY]
 
     scrubbed = "".join(p.read_text() for p in (tmp_path / "fx" / "scrubbed").iterdir())
-    for secret in ("111111256096816351", "A1B2C3", "4417", "abc123"):
+    for secret in ("000000000000000042", "A1B2C3", "4417", "abc123"):
         assert secret not in scrubbed
     raw_files = list((tmp_path / "fx" / "raw").iterdir())
     assert {p.name for p in raw_files} >= {"identity.json", "coverage.json"}

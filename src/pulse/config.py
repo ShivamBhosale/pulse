@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     data_dir: Path = Path("./data")
     fixtures_dir: Path = Path("./fixtures")
-    tz: str = "America/Toronto"
+    tz: str = "UTC"
     units: str = "metric"
 
     api_base: str = API_BASE

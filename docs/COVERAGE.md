@@ -47,4 +47,3 @@ This file records only which data types and methods work. It contains no health 
 
 - Filters use snake_case data type names, exactly as documented. The camelCase fallback was never needed.
 - When a method isn't supported, the API returns a 400 that lists the supported actions. The sync layer should choose a method per type from this table instead of probing.
-- The account time zone is `America/Toronto`. Units are kilometres and kilograms.

@@ -7,7 +7,7 @@ import pytest
 
 from pulse.sync import parsers as P
 
-TZ = ZoneInfo("America/Toronto")
+TZ = ZoneInfo("America/New_York")
 AT = datetime(2026, 11, 22, 5, 0, tzinfo=UTC)
 API = Path(__file__).parent / "fixtures" / "api"
 
