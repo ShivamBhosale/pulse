@@ -1,13 +1,45 @@
 # Pulse
 
-Pulse is a self-hosted, single-user dashboard for your Fitbit data, read from the
-**Google Health API v4**. It runs on your own server at no cost. It uses no cloud hosting and
-no AI calls, and your health data stays on the server.
+Pulse is a free, private health dashboard for your Fitbit data. Every score is calculated by fixed, documented rules: there's **no AI, no subscription and no cloud**. Your health data stays on devices you own.
 
-> **Status: Phase 7 — the Android app runs standalone on the phone from Health Connect, with premium-style features: sleep score, sleep need and bedtime, body signals, stress, training load, VO₂ max estimate and reports ([docs/ANDROID.md](docs/ANDROID.md)). The server and web dashboard below remain optional.**
-> Pages: Today, Sleep, Heart & recovery, Activity (with workout detail), Trends & explore, Records & streaks and Settings. It is an installable PWA, and readiness is a personal heuristic.
+There are two ways to use it, and each works on its own:
 
-## Quick start
+| | **Android app** (recommended) | **Server + web dashboard** (optional) |
+|---|---|---|
+| Data source | **Health Connect** on the phone, where the Fitbit app already writes | **Google Health API v4**, via your own OAuth client |
+| Runs on | your phone only: no server, no sign-in, no internet permission | a home server or laptop (Docker or systemd) |
+| Interface | native app (Today, Sleep, Health, Trends, More) and a home-screen widget | installable PWA in any browser |
+| Docs | **[docs/ANDROID.md](docs/ANDROID.md)** | [docs/SETUP.md](docs/SETUP.md) and the rest of this README |
+
+## Features
+
+- **Today.** Readiness (0–100) with its breakdown, sleep, resting HR, HRV, steps and active zone minutes, and a daily summary written by fixed rules.
+- **Sleep.** Stage chart and **sleep score**. **Sleep need** = goal + debt payback + recovery after a hard day. A **bedtime suggestion** and a 30-night **sleep profile** with chronotype.
+- **Health.** Resting HR, HRV, breathing rate, SpO₂ and skin temperature against your personal 28-day range. A **body-signals** alert when several are unusual on the same day. **Body stress** score, **training load** with a daily target, and a **VO₂ max** estimate.
+- **Trends and reports.** Any metric over 30 days, 90 days or a year; two metrics compared; weekly and monthly reports; records and streaks.
+- **Journal.** Tags and notes per day. On the server you can also test whether a tag (alcohol, a late meal…) changes your sleep or HRV.
+- **Data health.** Freshness, missing days per signal, and re-sync or re-import.
+
+Every score has a "How it's calculated" note. They're personal estimates, **not medical advice**.
+
+**Privacy.** The Android app has no `INTERNET` permission and its data is excluded from cloud backup. The server keeps secrets in `.env` and a 0600 token file, both git-ignored, and requests only read-only Google scopes. Tests use recorded fixtures, never live API calls.
+
+## Android app — quick start
+
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+scripts/android-keystore.sh                     # once: release signing key (git-ignored); back it up
+cd android && ./gradlew testDebugUnitTest lintDebug assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Open Pulse, tap **Connect Health Connect**, then allow all (including past data and background access). It imports your last 30 days in about 3 minutes, and older history continues in the background. Set your birth year in **More → Settings**. Details, including the algorithms, are in [docs/ANDROID.md](docs/ANDROID.md).
+
+---
+
+# The server (optional)
+
+## Server quick start
 
 1. Follow **[docs/SETUP.md](docs/SETUP.md)**. It covers the Google Cloud project, the consent
    screen, the Desktop OAuth client and the SSH tunnel.
@@ -39,7 +71,7 @@ is enabled (`systemctl enable docker`).
 | `pulse passcode set` / `clear` | Sets or removes the optional 4–6 digit passcode for the web UI. Setting it logs out every device. |
 | `pulse backup [--list]` | Backs up the database now. Uses SQLite's online backup, so it's safe while the server runs. Checks integrity, gzips the copy, then rotates old backups. `--list` shows existing backups. |
 | `pulse restore FILE [--yes]` | Replaces the database with a backup, keeping the current one as `pulse.db.pre-restore-<time>`. It refuses while the server or a sync is running. |
-| `pulse openapi [--out FILE]` | Writes the OpenAPI spec. The frontend types are generated from it, and so will the future Android client be. |
+| `pulse openapi [--out FILE]` | Writes the OpenAPI spec. The frontend types and the Android app's models are generated from it. |
 | `pulse serve` | Starts the API, the PWA and the 15-minute scheduler. OpenAPI is at `/api/v1/openapi.json`, docs at `/api/v1/docs`. |
 
 To run these locally without Docker: `uv sync`, then `uv run pulse …`.
@@ -120,15 +152,8 @@ The **Data** page (in the More menu on a phone) answers three questions.
 
 Endpoints: `GET /api/v1/data-health/freshness`, `/data-health/coverage?from&to` (at most 800 days) and `/data-health/day?date`. The maths lives in `coverage.py`: DST-aware day lengths, runs of missing days, wear gaps and freshness.
 
-### Android app (Phase 6)
-`android/` holds a native Kotlin and Jetpack Compose app:
-- Today: summary, tiles and quick journal
-- Sleep: night view with a hypnogram
-- a **home-screen widget**: readiness, steps, sleep and weekly AZM
-
-The deeper pages open the web app in a Chrome tab. The API client is **generated from `frontend/openapi.json`** at build time. The widget uses the compact `GET /api/v1/widget` endpoint, which returns about 300 bytes. The app connects to your server over Tailscale: https anywhere, or http only on Tailscale addresses.
-
-Build, install and setup are in **[docs/ANDROID.md](docs/ANDROID.md)**.
+### Android app (Phase 7)
+`android/` holds a native Kotlin and Jetpack Compose app. Since Phase 7 it **doesn't need the server**: it reads Health Connect and stores data in Room. It runs a Kotlin port of `derived.py` and `summary.py`, and its tests reuse the Python cases, so phone and server agree on the same data. It also adds its own premium-style algorithms. The UI models are generated from `frontend/openapi.json`. `GET /api/v1/widget` remains for anyone using the server. See **[docs/ANDROID.md](docs/ANDROID.md)**.
 
 ### Backups
 - **Nightly backup.** Runs at `PULSE_BACKUP_TIME` (03:30 local by default) and writes `data/backups/pulse-YYYY-MM-DD-HHMM.db.gz`. Files are mode 0600 in a 0700 directory and are never served over HTTP. Your current database (about 110 MB) compresses to about 14 MB.
@@ -190,8 +215,6 @@ frontend/                                           Vite + React + TS, TanStack 
 | `sync_state` | Per-stream sync bookkeeping. |
 | `settings` | Goals, units and the passcode hash. |
 | `tags`, `day_tags`, `day_notes` | Your tags and notes (migration 0002). Sync never writes to these. |
-
-These tables are enough to build a future template-based daily summary without schema changes.
 
 ## Where things live
 
