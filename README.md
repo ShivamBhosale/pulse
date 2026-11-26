@@ -4,7 +4,7 @@ Pulse is a self-hosted, single-user dashboard for your Fitbit data, read from th
 **Google Health API v4**. It runs on your own server at no cost. It uses no cloud hosting and
 no AI calls, and your health data stays on the server.
 
-> **Status: Phase 5 — data health page, on top of the dashboard, summary, backups, tags & notes.**
+> **Status: Phase 6 — Android app and widget ([docs/ANDROID.md](docs/ANDROID.md)), on top of the dashboard, summary, backups, tags & notes and data health.**
 > Pages: Today, Sleep, Heart & recovery, Activity (with workout detail), Trends & explore, Records & streaks and Settings. It is an installable PWA, and readiness is a personal heuristic.
 
 ## Quick start
@@ -120,6 +120,16 @@ The **Data** page (in the More menu on a phone) answers three questions.
 
 Endpoints: `GET /api/v1/data-health/freshness`, `/data-health/coverage?from&to` (at most 800 days) and `/data-health/day?date`. The maths lives in `coverage.py`: DST-aware day lengths, runs of missing days, wear gaps and freshness.
 
+### Android app (Phase 6)
+`android/` holds a native Kotlin and Jetpack Compose app:
+- Today: summary, tiles and quick journal
+- Sleep: night view with a hypnogram
+- a **home-screen widget**: readiness, steps, sleep and weekly AZM
+
+The deeper pages open the web app in a Chrome tab. The API client is **generated from `frontend/openapi.json`** at build time. The widget uses the compact `GET /api/v1/widget` endpoint, which returns about 300 bytes. The app connects to your server over Tailscale: https anywhere, or http only on Tailscale addresses.
+
+Build, install and setup are in **[docs/ANDROID.md](docs/ANDROID.md)**.
+
 ### Backups
 - **Nightly backup.** Runs at `PULSE_BACKUP_TIME` (03:30 local by default) and writes `data/backups/pulse-YYYY-MM-DD-HHMM.db.gz`. Files are mode 0600 in a 0700 directory and are never served over HTTP. Your current database (about 110 MB) compresses to about 14 MB.
 - **Rotation.** Keeps the newest backup of each of the last **7 days, 4 weeks and 6 months**, and never deletes the newest backup.
@@ -140,6 +150,7 @@ Endpoints: `GET /api/v1/data-health/freshness`, `/data-health/coverage?from&to` 
 | `GET /exercises`, `/exercises/{id}` | Workouts. Detail includes the HR curve and time in each zone. |
 | `GET /records` | Personal bests and streaks |
 | `GET /summary?date=` | Rule-based daily summary. It's also included in `/today`. |
+| `GET /widget` | Compact snapshot for the Android widget: readiness, steps, sleep, AZM week and sync state |
 | `GET/POST /tags`, `PATCH /tags/{key}` | Tags: create, rename, change kind, archive |
 | `GET/PUT /journal/{date}`, `GET /journal?from&to` | A day's tags and note, or every day with entries in a range |
 | `GET /explore/tag-effect`, `/explore/tag-effects` | Tagged vs untagged days: permutation test with a plain-language verdict |

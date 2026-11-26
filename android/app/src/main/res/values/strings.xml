@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Pulse</string>
+    <string name="widget_name">Pulse</string>
+    <string name="widget_description">Readiness, steps and last night\'s sleep</string>
+</resources>

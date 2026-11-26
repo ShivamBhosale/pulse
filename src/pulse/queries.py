@@ -1195,3 +1195,48 @@ def day_health(session: Session, d: date, now: datetime, zone: ZoneInfo) -> S.Da
         step_slots=int(step_slots),
         signals={sig.key: sig.cells[0] for sig in cov.signals},
     )
+
+
+# ---- phase 6: Android widget ---------------------------------------------------------------
+
+_READINESS_LABEL = {
+    "in_range": "a typical day for you",
+    "mild": "a bit {dir} your usual",
+    "notable": "well {dir} your usual",
+    "none": "not enough data yet",
+}
+
+
+def widget_snapshot(
+    session: Session, now: datetime, zone: ZoneInfo, auth_ok: bool
+) -> S.WidgetSnapshot:
+    d = now.astimezone(zone).date()
+    goals = prefs.goals(session)
+    r = daily_tile(session, "readiness", d, fallback_days=1)
+    direction = "above" if (r.delta or 0) > 0 else "below"
+    steps = steps_so_far_tile(session, d, now, zone, goals["steps"])
+    sleep = daily_values(session, "sleep_main_min", d - timedelta(days=1), d + timedelta(days=1))
+    azm = daily_values(session, "azm", d - timedelta(days=7), d + timedelta(days=1))
+    successes = [
+        st.last_success
+        for k, st in sync_states(session).items()
+        if st.last_success and not k.startswith("_")
+    ]
+    return S.WidgetSnapshot(
+        date=d,
+        generated_at=now,
+        readiness=S.WidgetReadiness(
+            value=r.value,
+            status=r.status,
+            label=_READINESS_LABEL[r.status].format(dir=direction),
+        ),
+        steps=steps.value,
+        steps_goal=goals["steps"],
+        steps_status=steps.status,
+        sleep_main_min=sleep.get(d, sleep.get(d - timedelta(days=1))),
+        sleep_goal_min=goals["sleep_min"],
+        azm_week=derived.week_to_date(azm, d),
+        azm_goal=goals["azm_weekly"],
+        last_synced=max(successes) if successes else None,
+        auth_ok=auth_ok,
+    )

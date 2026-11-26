@@ -589,6 +589,29 @@ class DayHealth(BaseModel):
     signals: dict[str, CellState]
 
 
+class WidgetReadiness(BaseModel):
+    value: float | None
+    status: StatusLevel
+    label: str = Field(description="e.g. 'a bit above your usual'")
+
+
+class WidgetSnapshot(BaseModel):
+    """Compact payload for the Android home-screen widget (a few hundred bytes)."""
+
+    date: Day
+    generated_at: Instant
+    readiness: WidgetReadiness
+    steps: float | None
+    steps_goal: int
+    steps_status: StatusLevel
+    sleep_main_min: float | None
+    sleep_goal_min: int
+    azm_week: float | None
+    azm_goal: int
+    last_synced: Instant | None
+    auth_ok: bool
+
+
 class Health(BaseModel):
     status: str
     version: str

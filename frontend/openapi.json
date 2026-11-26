@@ -48,6 +48,28 @@
         }
       }
     },
+    "/api/v1/widget": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Widget",
+        "description": "Compact snapshot for the Android home-screen widget.",
+        "operationId": "get_widget",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetSnapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/today": {
       "get": {
         "tags": [
@@ -5182,6 +5204,148 @@
           "n"
         ],
         "title": "WeekdayValue"
+      },
+      "WidgetReadiness": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_range",
+              "mild",
+              "notable",
+              "none"
+            ],
+            "title": "Status"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "e.g. 'a bit above your usual'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "status",
+          "label"
+        ],
+        "title": "WidgetReadiness"
+      },
+      "WidgetSnapshot": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/WidgetReadiness"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "steps_goal": {
+            "type": "integer",
+            "title": "Steps Goal"
+          },
+          "steps_status": {
+            "type": "string",
+            "enum": [
+              "in_range",
+              "mild",
+              "notable",
+              "none"
+            ],
+            "title": "Steps Status"
+          },
+          "sleep_main_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sleep Main Min"
+          },
+          "sleep_goal_min": {
+            "type": "integer",
+            "title": "Sleep Goal Min"
+          },
+          "azm_week": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Azm Week"
+          },
+          "azm_goal": {
+            "type": "integer",
+            "title": "Azm Goal"
+          },
+          "last_synced": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced"
+          },
+          "auth_ok": {
+            "type": "boolean",
+            "title": "Auth Ok"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "generated_at",
+          "readiness",
+          "steps",
+          "steps_goal",
+          "steps_status",
+          "sleep_main_min",
+          "sleep_goal_min",
+          "azm_week",
+          "azm_goal",
+          "last_synced",
+          "auth_ok"
+        ],
+        "title": "WidgetSnapshot",
+        "description": "Compact payload for the Android home-screen widget (a few hundred bytes)."
       },
       "ZoneBand": {
         "properties": {

@@ -109,6 +109,16 @@ def _backup_status(request: Request, row: SyncState | None) -> S.BackupStatus:
     )
 
 
+@router.get("/widget", response_model=S.WidgetSnapshot, name="get_widget", tags=["dashboard"])
+def get_widget(request: Request, db: DB) -> S.WidgetSnapshot:
+    """Compact snapshot for the Android home-screen widget."""
+    auth_row = queries.sync_states(db).get(AUTH_ROW)
+    auth_ok = request.app.state.settings.token_path.exists() and (
+        auth_row is None or auth_row.last_error is None
+    )
+    return queries.widget_snapshot(db, _now(request), request.app.state.zone, auth_ok)
+
+
 @router.get("/today", response_model=S.Today, name="get_today", tags=["dashboard"])
 def get_today(request: Request, db: DB) -> S.Today:
     zone = request.app.state.zone

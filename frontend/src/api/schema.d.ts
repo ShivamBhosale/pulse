@@ -38,6 +38,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/widget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Widget
+         * @description Compact snapshot for the Android home-screen widget.
+         */
+        get: operations["get_widget"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/today": {
         parameters: {
             query?: never;
@@ -1791,6 +1811,59 @@ export interface components {
             /** N */
             n: number;
         };
+        /** WidgetReadiness */
+        WidgetReadiness: {
+            /** Value */
+            value: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "in_range" | "mild" | "notable" | "none";
+            /**
+             * Label
+             * @description e.g. 'a bit above your usual'
+             */
+            label: string;
+        };
+        /**
+         * WidgetSnapshot
+         * @description Compact payload for the Android home-screen widget (a few hundred bytes).
+         */
+        WidgetSnapshot: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            readiness: components["schemas"]["WidgetReadiness"];
+            /** Steps */
+            steps: number | null;
+            /** Steps Goal */
+            steps_goal: number;
+            /**
+             * Steps Status
+             * @enum {string}
+             */
+            steps_status: "in_range" | "mild" | "notable" | "none";
+            /** Sleep Main Min */
+            sleep_main_min: number | null;
+            /** Sleep Goal Min */
+            sleep_goal_min: number;
+            /** Azm Week */
+            azm_week: number | null;
+            /** Azm Goal */
+            azm_goal: number;
+            /** Last Synced */
+            last_synced: string | null;
+            /** Auth Ok */
+            auth_ok: boolean;
+        };
         /** ZoneBand */
         ZoneBand: {
             /** Zone */
@@ -1852,6 +1925,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Status"];
+                };
+            };
+        };
+    };
+    get_widget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetSnapshot"];
                 };
             };
         };

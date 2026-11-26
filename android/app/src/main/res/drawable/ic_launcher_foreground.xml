@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The web app's pulse-line mark (512 viewport), scaled into the adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <group
+        android:pivotX="256"
+        android:pivotY="256"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:pathData="M84,280h88l34,-92 52,176 44,-128 26,44h100"
+            android:strokeWidth="34"
+            android:strokeColor="#FF9D8CFF"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000" />
+    </group>
+</vector>

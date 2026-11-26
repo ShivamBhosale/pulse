@@ -21,3 +21,15 @@ frontend/dist/
 frontend/dev-dist/
 
 .DS_Store
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/keystore/
+android/keystore.properties
+android/.idea/
+android/.kotlin/
+*.apk
+*.aab
