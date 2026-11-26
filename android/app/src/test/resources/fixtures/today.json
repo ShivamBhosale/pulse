@@ -1,0 +1,746 @@
+{
+ "date": "2026-11-21",
+ "generated_at": "2026-11-21T17:00:00Z",
+ "last_synced": "2026-11-21T17:00:00Z",
+ "goals": {
+  "sleep_min": 480,
+  "steps": 10000,
+  "azm_weekly": 150
+ },
+ "tiles": [
+  {
+   "key": "readiness",
+   "label": "Readiness",
+   "unit": "score",
+   "value": null,
+   "value_date": null,
+   "delta": null,
+   "status": "none",
+   "better": "up",
+   "baseline": null,
+   "spark": [
+    {
+     "date": "2026-11-08",
+     "value": null
+    },
+    {
+     "date": "2026-11-09",
+     "value": null
+    },
+    {
+     "date": "2026-11-10",
+     "value": null
+    },
+    {
+     "date": "2026-11-11",
+     "value": null
+    },
+    {
+     "date": "2026-11-12",
+     "value": null
+    },
+    {
+     "date": "2026-11-13",
+     "value": null
+    },
+    {
+     "date": "2026-11-14",
+     "value": null
+    },
+    {
+     "date": "2026-11-15",
+     "value": null
+    },
+    {
+     "date": "2026-11-16",
+     "value": null
+    },
+    {
+     "date": "2026-11-17",
+     "value": null
+    },
+    {
+     "date": "2026-11-18",
+     "value": null
+    },
+    {
+     "date": "2026-11-19",
+     "value": null
+    },
+    {
+     "date": "2026-11-20",
+     "value": null
+    },
+    {
+     "date": "2026-11-21",
+     "value": null
+    }
+   ],
+   "note": "Not enough data yet \u00b7 personal heuristic",
+   "goal": null,
+   "components": [
+    {
+     "key": "hrv",
+     "label": "HRV vs baseline",
+     "score": null,
+     "weight": 0.0,
+     "value": null,
+     "reference": null,
+     "unit": "ms"
+    },
+    {
+     "key": "rhr",
+     "label": "Resting HR vs baseline",
+     "score": 16.7,
+     "weight": 0.5,
+     "value": 60.0,
+     "reference": 57.0,
+     "unit": "bpm"
+    },
+    {
+     "key": "sleep",
+     "label": "Last night's sleep vs goal",
+     "score": 100.0,
+     "weight": 0.5,
+     "value": 530.0,
+     "reference": 480.0,
+     "unit": "min"
+    },
+    {
+     "key": "strain",
+     "label": "Yesterday's strain vs baseline",
+     "score": null,
+     "weight": 0.0,
+     "value": 0.0,
+     "reference": null,
+     "unit": "min"
+    }
+   ],
+   "formula": "Personal heuristic, not a medical measure. Weighted mean of four 0-100 parts: HRV vs your 28-day median (higher is better), resting HR vs your 28-day median (lower is better), last night's main sleep vs your goal (capped at 100), and yesterday's strain vs your 28-day median (lower scores higher, capped at 70). HRV and resting HR score 50 at your median and reach 0 or 100 at 1.5 x IQR away. Missing parts are left out and the remaining weights rescaled; at least two parts, including HRV or sleep, are needed."
+  },
+  {
+   "key": "sleep_main_min",
+   "label": "Last night's sleep",
+   "unit": "min",
+   "value": 530.0,
+   "value_date": "2026-11-21",
+   "delta": null,
+   "status": "none",
+   "better": "up",
+   "baseline": null,
+   "spark": [
+    {
+     "date": "2026-11-08",
+     "value": null
+    },
+    {
+     "date": "2026-11-09",
+     "value": null
+    },
+    {
+     "date": "2026-11-10",
+     "value": null
+    },
+    {
+     "date": "2026-11-11",
+     "value": null
+    },
+    {
+     "date": "2026-11-12",
+     "value": null
+    },
+    {
+     "date": "2026-11-13",
+     "value": null
+    },
+    {
+     "date": "2026-11-14",
+     "value": null
+    },
+    {
+     "date": "2026-11-15",
+     "value": null
+    },
+    {
+     "date": "2026-11-16",
+     "value": null
+    },
+    {
+     "date": "2026-11-17",
+     "value": null
+    },
+    {
+     "date": "2026-11-18",
+     "value": 530.0
+    },
+    {
+     "date": "2026-11-19",
+     "value": 530.0
+    },
+    {
+     "date": "2026-11-20",
+     "value": 530.0
+    },
+    {
+     "date": "2026-11-21",
+     "value": 530.0
+    }
+   ],
+   "note": null,
+   "goal": 480.0,
+   "components": null,
+   "formula": null
+  },
+  {
+   "key": "resting_hr",
+   "label": "Resting heart rate",
+   "unit": "bpm",
+   "value": 60.0,
+   "value_date": "2026-11-21",
+   "delta": 3.0,
+   "status": "mild",
+   "better": "down",
+   "baseline": {
+    "median": 57.0,
+    "q1": 56.0,
+    "q3": 59.0,
+    "n": 28
+   },
+   "spark": [
+    {
+     "date": "2026-11-08",
+     "value": 58.0
+    },
+    {
+     "date": "2026-11-09",
+     "value": 57.0
+    },
+    {
+     "date": "2026-11-10",
+     "value": 56.0
+    },
+    {
+     "date": "2026-11-11",
+     "value": 55.0
+    },
+    {
+     "date": "2026-11-12",
+     "value": 59.0
+    },
+    {
+     "date": "2026-11-13",
+     "value": 58.0
+    },
+    {
+     "date": "2026-11-14",
+     "value": 57.0
+    },
+    {
+     "date": "2026-11-15",
+     "value": 56.0
+    },
+    {
+     "date": "2026-11-16",
+     "value": 55.0
+    },
+    {
+     "date": "2026-11-17",
+     "value": 59.0
+    },
+    {
+     "date": "2026-11-18",
+     "value": 60.0
+    },
+    {
+     "date": "2026-11-19",
+     "value": 60.0
+    },
+    {
+     "date": "2026-11-20",
+     "value": 60.0
+    },
+    {
+     "date": "2026-11-21",
+     "value": 60.0
+    }
+   ],
+   "note": null,
+   "goal": null,
+   "components": null,
+   "formula": null
+  },
+  {
+   "key": "hrv_rmssd",
+   "label": "HRV",
+   "unit": "ms",
+   "value": null,
+   "value_date": null,
+   "delta": null,
+   "status": "none",
+   "better": "up",
+   "baseline": null,
+   "spark": [
+    {
+     "date": "2026-11-08",
+     "value": null
+    },
+    {
+     "date": "2026-11-09",
+     "value": null
+    },
+    {
+     "date": "2026-11-10",
+     "value": null
+    },
+    {
+     "date": "2026-11-11",
+     "value": null
+    },
+    {
+     "date": "2026-11-12",
+     "value": null
+    },
+    {
+     "date": "2026-11-13",
+     "value": null
+    },
+    {
+     "date": "2026-11-14",
+     "value": null
+    },
+    {
+     "date": "2026-11-15",
+     "value": null
+    },
+    {
+     "date": "2026-11-16",
+     "value": null
+    },
+    {
+     "date": "2026-11-17",
+     "value": null
+    },
+    {
+     "date": "2026-11-18",
+     "value": null
+    },
+    {
+     "date": "2026-11-19",
+     "value": null
+    },
+    {
+     "date": "2026-11-20",
+     "value": null
+    },
+    {
+     "date": "2026-11-21",
+     "value": null
+    }
+   ],
+   "note": null,
+   "goal": null,
+   "components": null,
+   "formula": null
+  },
+  {
+   "key": "steps",
+   "label": "Steps so far",
+   "unit": "steps",
+   "value": 8000.0,
+   "value_date": "2026-11-21",
+   "delta": 6000.0,
+   "status": "notable",
+   "better": "up",
+   "baseline": {
+    "median": 2000.0,
+    "q1": 1000.0,
+    "q3": 2000.0,
+    "n": 25
+   },
+   "spark": [
+    {
+     "date": "2026-11-08",
+     "value": 8300.0
+    },
+    {
+     "date": "2026-11-09",
+     "value": 8200.0
+    },
+    {
+     "date": "2026-11-10",
+     "value": 8100.0
+    },
+    {
+     "date": "2026-11-11",
+     "value": 8000.0
+    },
+    {
+     "date": "2026-11-12",
+     "value": 7900.0
+    },
+    {
+     "date": "2026-11-13",
+     "value": 7800.0
+    },
+    {
+     "date": "2026-11-14",
+     "value": 7700.0
+    },
+    {
+     "date": "2026-11-15",
+     "value": 7600.0
+    },
+    {
+     "date": "2026-11-16",
+     "value": 7500.0
+    },
+    {
+     "date": "2026-11-17",
+     "value": 7400.0
+    },
+    {
+     "date": "2026-11-18",
+     "value": 8000.0
+    },
+    {
+     "date": "2026-11-19",
+     "value": 8000.0
+    },
+    {
+     "date": "2026-11-20",
+     "value": 8000.0
+    },
+    {
+     "date": "2026-11-21",
+     "value": 8000.0
+    }
+   ],
+   "note": "vs. your usual by this time",
+   "goal": 10000.0,
+   "components": null,
+   "formula": null
+  },
+  {
+   "key": "azm",
+   "label": "Active zone minutes",
+   "unit": "min",
+   "value": 0.0,
+   "value_date": "2026-11-21",
+   "delta": null,
+   "status": "none",
+   "better": "up",
+   "baseline": null,
+   "spark": [
+    {
+     "date": "2026-11-08",
+     "value": null
+    },
+    {
+     "date": "2026-11-09",
+     "value": null
+    },
+    {
+     "date": "2026-11-10",
+     "value": null
+    },
+    {
+     "date": "2026-11-11",
+     "value": null
+    },
+    {
+     "date": "2026-11-12",
+     "value": null
+    },
+    {
+     "date": "2026-11-13",
+     "value": null
+    },
+    {
+     "date": "2026-11-14",
+     "value": null
+    },
+    {
+     "date": "2026-11-15",
+     "value": null
+    },
+    {
+     "date": "2026-11-16",
+     "value": null
+    },
+    {
+     "date": "2026-11-17",
+     "value": null
+    },
+    {
+     "date": "2026-11-18",
+     "value": 0.0
+    },
+    {
+     "date": "2026-11-19",
+     "value": 0.0
+    },
+    {
+     "date": "2026-11-20",
+     "value": 0.0
+    },
+    {
+     "date": "2026-11-21",
+     "value": 0.0
+    }
+   ],
+   "note": "0 of 150 this week",
+   "goal": 150.0,
+   "components": null,
+   "formula": null
+  }
+ ],
+ "heart_rate": {
+  "date": "2026-11-21",
+  "points": [],
+  "zones": [],
+  "periods": [
+   {
+    "kind": "sleep",
+    "start": "2026-11-21T03:00:00Z",
+    "end": "2026-11-21T12:00:00Z",
+    "label": "Sleep"
+   }
+  ],
+  "resting_hr": 60.0
+ },
+ "steps_curve": {
+  "slot_minutes": 15,
+  "today": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   2500.0,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "median": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   1000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   2000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0,
+   3000.0
+  ],
+  "days_in_median": 25
+ },
+ "summary": {
+  "date": "2026-11-21",
+  "headline": "Readiness 58: a typical day for you",
+  "sentences": [
+   {
+    "text": "Readiness is 58.",
+    "tone": "neutral",
+    "metrics": [
+     "readiness"
+    ]
+   },
+   {
+    "text": "0 of 150 active zone minutes this week: 150 to go in 2 days (~75 a day).",
+    "tone": "neutral",
+    "metrics": [
+     "azm"
+    ]
+   },
+   {
+    "text": "Resting heart rate is 60 bpm, above your usual 57 for a second day.",
+    "tone": "attention",
+    "metrics": [
+     "resting_hr"
+    ]
+   },
+   {
+    "text": "Tagged last night: Alcohol.",
+    "tone": "neutral",
+    "metrics": [
+     "tags"
+    ]
+   }
+  ],
+  "generated_at": "2026-11-21T17:00:00Z"
+ }
+}

@@ -1,0 +1,41 @@
+{
+ "date": "2026-11-21",
+ "goal_min": 480,
+ "session": {
+  "id": "users/u/dataTypes/sleep/dataPoints/s0",
+  "date": "2026-11-21",
+  "start": "2026-11-21T03:00:00Z",
+  "end": "2026-11-21T12:00:00Z",
+  "is_main": true,
+  "sleep_type": "STAGES",
+  "minutes_in_bed": 540.0,
+  "minutes_asleep": 530,
+  "minutes_awake": 10,
+  "minutes_to_fall_asleep": 0,
+  "deep_min": 260,
+  "light_min": 270,
+  "rem_min": null,
+  "awake_min": null,
+  "efficiency": 98.1,
+  "stages": [
+   {
+    "stage": "LIGHT",
+    "start": "2026-11-21T03:00:00Z",
+    "end": "2026-11-21T07:30:00Z"
+   },
+   {
+    "stage": "DEEP",
+    "start": "2026-11-21T07:30:00Z",
+    "end": "2026-11-21T12:00:00Z"
+   }
+  ]
+ },
+ "naps": [],
+ "sleeping_hr": null,
+ "spo2": null,
+ "skin_temp_delta": null,
+ "hrv_rmssd": null,
+ "resting_hr": 60.0,
+ "prev_date": "2026-11-20",
+ "next_date": null
+}

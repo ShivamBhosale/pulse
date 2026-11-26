@@ -1,0 +1,18 @@
+{
+ "date": "2026-11-21",
+ "generated_at": "2026-11-21T17:00:00Z",
+ "readiness": {
+  "value": null,
+  "status": "none",
+  "label": "not enough data yet"
+ },
+ "steps": 8000.0,
+ "steps_goal": 10000,
+ "steps_status": "notable",
+ "sleep_main_min": 530.0,
+ "sleep_goal_min": 480,
+ "azm_week": 0.0,
+ "azm_goal": 150,
+ "last_synced": "2026-11-21T17:00:00Z",
+ "auth_ok": false
+}

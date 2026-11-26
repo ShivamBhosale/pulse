@@ -1,0 +1,66 @@
+[
+ {
+  "key": "alcohol",
+  "label": "Alcohol",
+  "kind": "evening",
+  "archived": false,
+  "uses": 1,
+  "last_used": "2026-11-20"
+ },
+ {
+  "key": "late-meal",
+  "label": "Late meal",
+  "kind": "evening",
+  "archived": false,
+  "uses": 0,
+  "last_used": null
+ },
+ {
+  "key": "late-caffeine",
+  "label": "Late caffeine",
+  "kind": "evening",
+  "archived": false,
+  "uses": 0,
+  "last_used": null
+ },
+ {
+  "key": "screen-late",
+  "label": "Screen late",
+  "kind": "evening",
+  "archived": false,
+  "uses": 0,
+  "last_used": null
+ },
+ {
+  "key": "sick",
+  "label": "Sick",
+  "kind": "day",
+  "archived": false,
+  "uses": 0,
+  "last_used": null
+ },
+ {
+  "key": "travel",
+  "label": "Travel",
+  "kind": "day",
+  "archived": false,
+  "uses": 0,
+  "last_used": null
+ },
+ {
+  "key": "stress",
+  "label": "Stress",
+  "kind": "day",
+  "archived": false,
+  "uses": 0,
+  "last_used": null
+ },
+ {
+  "key": "rest-day",
+  "label": "Rest day",
+  "kind": "day",
+  "archived": false,
+  "uses": 0,
+  "last_used": null
+ }
+]
