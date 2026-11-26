@@ -135,6 +135,7 @@ fun SleepScreen(container: AppContainer) {
             n?.session == null -> item { PulseCard { Text("No sleep recorded for this night.", color = p.muted) } }
             else -> {
                 val ses = n.session!!
+                item { dev.pulse.app.ui.premium.SleepPremiumCards(container, n.date) }
                 if (s.eveningTags.isNotEmpty() || s.eveningNote.isNotBlank()) item { EveningBefore(s) }
                 item { Stats(n, ses) }
                 item {

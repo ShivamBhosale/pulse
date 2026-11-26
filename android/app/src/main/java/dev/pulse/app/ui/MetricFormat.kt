@@ -11,6 +11,10 @@ object Metrics {
     val ALL =
         listOf(
             MetricUi("readiness", "Readiness", n(0, "")),
+            MetricUi("sleep_score", "Sleep score", n(0, ""), bars = true, band = false),
+            MetricUi("stress_score", "Body stress", n(0, ""), band = false),
+            MetricUi("sleep_need_min", "Sleep need", { Fmt.duration(it) }, band = false),
+            MetricUi("vo2max", "Cardio fitness (VO₂ max est.)", n(1, ""), band = false),
             MetricUi("resting_hr", "Resting heart rate", n(0, "bpm")),
             MetricUi("hrv_rmssd", "Heart rate variability", n(1, "ms")),
             MetricUi("resp_rate", "Breathing rate", n(1, "brpm")),

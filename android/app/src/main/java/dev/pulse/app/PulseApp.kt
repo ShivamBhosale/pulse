@@ -38,7 +38,9 @@ class PulseApp : Application() {
             scope.launch {
                 try {
                     if (Hc.status(this@PulseApp) != HealthConnectClient.SDK_AVAILABLE) return@launch
-                    if (container.sync.importDone() || !container.sync.recentReady()) return@launch
+                    if (!container.sync.recentReady()) return@launch
+                    container.sync.backfillPremium()
+                    if (container.sync.importDone()) return@launch
                     _importing.value = container.sync.importCursor()?.toString()
                     container.sync.importHistory { cursor, _ -> _importing.value = cursor.toString() }
                 } catch (e: Exception) {

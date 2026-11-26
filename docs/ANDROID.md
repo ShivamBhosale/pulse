@@ -10,6 +10,24 @@ Pulse runs **entirely on your phone**. It reads the data your Fitbit app already
 | **Trends** | Any metric over 30 days, 90 days or a year, and how two metrics move together. |
 | **More** | Records and streaks; Data and sync (freshness, coverage, re-import); Settings (goals, birth year, units, readiness weights); add the widget. |
 
+## Premium-style features (Pulse's own algorithms)
+
+Every score has a **"How it's calculated"** note in the app. These are personal estimates, not medical advice.
+
+| Feature | How it works |
+|---|---|
+| **Sleep score (0–100)** | **Duration** (50 points): time asleep vs tonight's need. **Quality** (25): deep sleep between 13–23% and REM between 18–28% of the night. **Restoration** (25): sleeping HR at or below resting HR, under 20 minutes awake, at most 2 interruptions. 90+ Excellent, 80–89 Good, 60–79 Fair, under 60 Poor. |
+| **Sleep need and debt** | Need = sleep goal + debt payback (one seventh of the 7-night debt, at most +60 minutes) + 10 minutes after a hard day. Shown with a payback plan. |
+| **Bedtime suggestion** | Your typical wake time (14-night median) − tonight's need − your usual time to fall asleep. |
+| **Sleep profile** | Last 30 nights against the 30 before: average sleep, bedtime regularity, deep and REM %, interruptions, sleep midpoint and chronotype (early before 03:00, late after 04:30). |
+| **Body signals** | An alert when 3 or more of these are notably off on the same day: RHR up, HRV down, breathing rate up, skin temperature +0.5 °C or more, SpO₂ down. Never a diagnosis. |
+| **Body stress (0–100)** | HRV below usual (30%), RHR above usual (20%), sleep short of need (20%), breathing rate above usual (10%), and waking minutes with HR 20+ bpm above resting while barely moving (20%). Under 35 Low, 35–65 Moderate, over 65 High. |
+| **Training load and target** | 7-day vs 28-day active minutes: detraining, maintaining, building or overreaching. Today's AZM target = 28-day average × 0.6, 1.0 or 1.3, depending on readiness. |
+| **Cardio fitness** | VO₂ max estimate = 15.3 × max HR ÷ 7-day resting HR (Uth–Sørensen), with max HR = 208 − 0.7 × age. Approximate age and sex bands. |
+| **Reports** | Last 7 or 30 days against the period before, plus highlights and tag counts. |
+
+Sleep score, sleep need and stress are stored per day, so **Trends** can chart them like any other metric, along with VO₂ max.
+
 ## Where the data comes from
 
 | Health Connect record | Written by | Pulse uses it for |

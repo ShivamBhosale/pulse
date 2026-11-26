@@ -32,6 +32,7 @@ import dev.pulse.app.ui.theme.LocalPulse
 import dev.pulse.app.widget.PulseWidgetReceiver
 
 private enum class Page(val title: String, val desc: String) {
+    REPORTS("Reports", "Last week and last month compared with the period before"),
     RECORDS("Records & streaks", "Personal bests and current streaks"),
     DATA("Data & sync", "Health Connect access, freshness, missing days, re-import"),
     SETTINGS("Settings", "Goals, birth year, units, readiness weights"),
@@ -42,6 +43,7 @@ fun MoreScreen(container: AppContainer) {
     var page by rememberSaveable { mutableStateOf<Page?>(null) }
     BackHandler(enabled = page != null) { page = null }
     when (page) {
+        Page.REPORTS -> SubPage("Reports", { page = null }) { dev.pulse.app.ui.premium.ReportsPage(container) }
         Page.RECORDS -> SubPage("Records & streaks", { page = null }) { RecordsPage(container) }
         Page.DATA -> SubPage("Data & sync", { page = null }) { DataPage(container) }
         Page.SETTINGS -> SubPage("Settings", { page = null }) { SettingsPage(container) }

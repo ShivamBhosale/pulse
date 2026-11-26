@@ -97,7 +97,7 @@ private fun MainTabs(container: AppContainer) {
             when (tab) {
                 Tab.Today -> TodayScreen(container)
                 Tab.Sleep -> SleepScreen(container)
-                Tab.Health -> HealthScreen(container)
+                Tab.Health -> HealthScreen(container, header = { dev.pulse.app.ui.premium.HealthPremiumHeader(container) })
                 Tab.Trends -> TrendsScreen(container)
                 Tab.More -> MoreScreen(container)
             }

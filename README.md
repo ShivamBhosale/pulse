@@ -4,7 +4,7 @@ Pulse is a self-hosted, single-user dashboard for your Fitbit data, read from th
 **Google Health API v4**. It runs on your own server at no cost. It uses no cloud hosting and
 no AI calls, and your health data stays on the server.
 
-> **Status: Phase 7 — the Android app runs standalone on the phone from Health Connect ([docs/ANDROID.md](docs/ANDROID.md)). The server and web dashboard below remain optional.**
+> **Status: Phase 7 — the Android app runs standalone on the phone from Health Connect, with premium-style features: sleep score, sleep need and bedtime, body signals, stress, training load, VO₂ max estimate and reports ([docs/ANDROID.md](docs/ANDROID.md)). The server and web dashboard below remain optional.**
 > Pages: Today, Sleep, Heart & recovery, Activity (with workout detail), Trends & explore, Records & streaks and Settings. It is an installable PWA, and readiness is a personal heuristic.
 
 ## Quick start

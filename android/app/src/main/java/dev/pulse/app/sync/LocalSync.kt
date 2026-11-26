@@ -208,8 +208,47 @@ class LocalSync(
             db.sleep().upsertStages(stages)
             db.exercises().upsert(exercises)
         }
+        // Premium daily metrics (sleep score, sleep need, stress) for the window's days.
+        val premium = mutableListOf<DailyMetric>()
+        var pd = from
+        while (pd <= to) {
+            premium += dev.pulse.app.data.Premium.rows(db, pd, p, zone, prefs.age(p, pd.year))
+            pd = pd.plusDays(1)
+        }
+        db.withTransaction {
+            db.metrics().clear(dev.pulse.app.data.Premium.DAILY_KEYS, from.toEpochDay(), to.toEpochDay())
+            db.metrics().upsert(premium)
+        }
         Log.i(TAG, "window $from..$to: ${metrics.size} metrics, ${hr.size} hr min, ${sessions.size} sleeps")
         return metrics.size + hr.size + steps.size + sessions.size
+    }
+
+    /** One-time: premium rows for every day already stored (data synced before premium existed). */
+    suspend fun backfillPremium() {
+        if (db.kv().get("premium_v1") == "done") return
+        val p = prefs.get()
+        val spans = db.metrics().available().associateBy { it.metric }
+        val first = spans["steps"]?.firstDay?.let { LocalDate.ofEpochDay(it) } ?: return
+        var d = today()
+        while (d >= first) {
+            val chunkFrom = maxOf(first, d.minusDays(29))
+            lock.withLock {
+                val rows = mutableListOf<DailyMetric>()
+                var x = chunkFrom
+                while (x <= d) {
+                    rows += dev.pulse.app.data.Premium.rows(db, x, p, zone, prefs.age(p, x.year))
+                    x = x.plusDays(1)
+                }
+                db.withTransaction {
+                    db.metrics().clear(dev.pulse.app.data.Premium.DAILY_KEYS, chunkFrom.toEpochDay(), d.toEpochDay())
+                    db.metrics().upsert(rows)
+                }
+            }
+            d = chunkFrom.minusDays(1)
+        }
+        lock.withLock { recompute() }
+        db.kv().put(Kv("premium_v1", "done"))
+        Log.i(TAG, "premium backfill done from $first")
     }
 
     /** Recompute all derived daily metrics (milliseconds for a few years of days). */
@@ -218,9 +257,11 @@ class LocalSync(
         val inputs = listOf("azm", "calories_total", "calories_active", "sleep_main_min", "bedtime_min", "waketime_min", "hrv_rmssd", "resting_hr")
         val series = inputs.associateWith { k -> db.metrics().all(k).associate { LocalDate.ofEpochDay(it.day) to it.value } }
         val rows = DeriveDaily.derive(series, p.goals.sleepMin.toDouble(), p.weights)
+        val vo2 = dev.pulse.app.data.Premium.vo2Rows(series["resting_hr"].orEmpty(), prefs.age(p, today().year))
         db.withTransaction {
-            db.metrics().clearAll(DeriveDaily.UNITS.keys.toList())
+            db.metrics().clearAll(DeriveDaily.UNITS.keys.toList() + "vo2max")
             db.metrics().upsert(rows.map { DailyMetric(it.date.toEpochDay(), it.metric, it.value, DeriveDaily.UNITS.getValue(it.metric)) })
+            db.metrics().upsert(vo2)
         }
     }
 }
